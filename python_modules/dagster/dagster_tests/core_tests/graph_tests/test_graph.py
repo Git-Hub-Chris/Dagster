@@ -1076,3 +1076,15 @@ def test_graphs_break_type_checks():
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
         repro_2.execute_in_process()
+
+
+def test_nothing_inputs():
+    @op(ins={"dummy": In(Nothing)})
+    def foo():
+        return "foo"
+
+    with pytest.raises(DagsterInvalidDefinitionError, match="Nothing-type"):
+
+        @graph(ins={"dummy": In(dagster_type=Nothing)})
+        def g():
+            return foo()
