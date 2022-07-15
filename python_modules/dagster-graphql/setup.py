@@ -24,10 +24,6 @@ if __name__ == "__main__":
         description="The GraphQL frontend to python dagster.",
         url="https://github.com/dagster-io/dagster/tree/master/python_modules/dagster-graphql",
         classifiers=[
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
             "License :: OSI Approved :: Apache Software License",
             "Operating System :: OS Independent",
         ],
@@ -39,5 +35,6 @@ if __name__ == "__main__":
             "requests",
             "gql",
         ],
+        python_requires=">=3.6,<=3.10",
         entry_points={"console_scripts": ["dagster-graphql = dagster_graphql.cli:main"]},
     )

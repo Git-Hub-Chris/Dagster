@@ -24,10 +24,6 @@ if __name__ == "__main__":
         description="Package for Databricks-specific Dagster framework solid and resource components.",
         url="https://github.com/dagster-io/dagster/tree/master/python_modules/libraries/dagster-databricks",
         classifiers=[
-            "Programming Language :: Python :: 3.6",
-            "Programming Language :: Python :: 3.7",
-            "Programming Language :: Python :: 3.8",
-            "Programming Language :: Python :: 3.9",
             "License :: OSI Approved :: Apache Software License",
             "Operating System :: OS Independent",
         ],
@@ -38,5 +34,6 @@ if __name__ == "__main__":
             f"dagster-pyspark{pin}",
             "databricks_api",
         ],
+        python_requires=">=3.6,<=3.10",
         zip_safe=False,
     )
