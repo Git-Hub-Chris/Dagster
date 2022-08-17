@@ -1,0 +1,1 @@
+black[jupyter]==22.6.0

@@ -1,0 +1,2 @@
+-e ${DAGSTER_GIT_REPO_DIR}/python_modules/tools/dagster-pylint
+pylint==2.14.5
