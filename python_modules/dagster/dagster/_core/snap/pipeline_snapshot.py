@@ -6,7 +6,7 @@ from dagster._config import (
     Array,
     ConfigEnumValueSnap,
     ConfigFieldSnap,
-    ConfigSchemaSnapshot,
+    ConfigSchemaSnap,
     ConfigType,
     ConfigTypeKind,
     ConfigTypeSnap,
@@ -19,7 +19,7 @@ from dagster._config import (
     ScalarUnion,
     Selector,
     Shape,
-    get_builtin_scalar_by_name,
+    get_scalar_config_type_by_name,
 )
 from dagster._core.definitions.events import AssetKey
 from dagster._core.definitions.job_definition import JobDefinition
@@ -84,7 +84,7 @@ def _pipeline_snapshot_from_storage(
     name: str,
     description: Optional[str],
     tags: Optional[Mapping[str, Any]],
-    config_schema_snapshot: ConfigSchemaSnapshot,
+    config_schema_snapshot: ConfigSchemaSnap,
     dagster_type_namespace_snapshot: DagsterTypeNamespaceSnapshot,
     solid_definitions_snapshot: SolidDefinitionsSnapshot,
     dep_structure_snapshot: DependencyStructureSnapshot,
@@ -136,7 +136,7 @@ class PipelineSnapshot(
             ("name", str),
             ("description", Optional[str]),
             ("tags", Mapping[str, Any]),
-            ("config_schema_snapshot", ConfigSchemaSnapshot),
+            ("config_schema_snapshot", ConfigSchemaSnap),
             ("dagster_type_namespace_snapshot", DagsterTypeNamespaceSnapshot),
             ("solid_definitions_snapshot", SolidDefinitionsSnapshot),
             ("dep_structure_snapshot", DependencyStructureSnapshot),
@@ -152,7 +152,7 @@ class PipelineSnapshot(
         name: str,
         description: Optional[str],
         tags: Optional[Mapping[str, Any]],
-        config_schema_snapshot: ConfigSchemaSnapshot,
+        config_schema_snapshot: ConfigSchemaSnap,
         dagster_type_namespace_snapshot: DagsterTypeNamespaceSnapshot,
         solid_definitions_snapshot: SolidDefinitionsSnapshot,
         dep_structure_snapshot: DependencyStructureSnapshot,
@@ -167,7 +167,7 @@ class PipelineSnapshot(
             description=check.opt_str_param(description, "description"),
             tags=check.opt_mapping_param(tags, "tags"),
             config_schema_snapshot=check.inst_param(
-                config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnapshot
+                config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnap
             ),
             dagster_type_namespace_snapshot=check.inst_param(
                 dagster_type_namespace_snapshot,
@@ -230,7 +230,7 @@ class PipelineSnapshot(
                 pipeline_def.graph
             ),
             mode_def_snaps=[
-                build_mode_def_snap(md, pipeline_def.get_run_config_schema(md.name).config_type.key)
+                build_mode_def_snap(md, pipeline_def.get_run_config_schema(md.name).root_config_type.key)
                 for md in pipeline_def.mode_definitions
             ],
             lineage_snapshot=lineage,
@@ -263,9 +263,9 @@ class PipelineSnapshot(
         check.inst_param(solid_def_snap, "solid_def_snap", (SolidDefSnap, CompositeSolidDefSnap))
         if solid_def_snap.config_field_snap:
             config_type_key = solid_def_snap.config_field_snap.type_key
-            if self.config_schema_snapshot.has_config_snap(config_type_key):
+            if self.config_schema_snapshot.has_config_type_snap(config_type_key):
                 return construct_config_type_from_snap(
-                    self.config_schema_snapshot.get_config_snap(config_type_key),
+                    self.config_schema_snapshot.get_config_type_snap(config_type_key),
                     self.config_schema_snapshot.all_config_snaps_by_key,
                 )
         return None
@@ -426,7 +426,7 @@ def construct_config_type_from_snap(
     check.mapping_param(config_snap_map, "config_snap_map", key_type=str, value_type=ConfigTypeSnap)
 
     if config_type_snap.kind in (ConfigTypeKind.SCALAR, ConfigTypeKind.ANY):
-        return get_builtin_scalar_by_name(config_type_snap.key)
+        return get_scalar_config_type_by_name(config_type_snap.key)
     elif config_type_snap.kind == ConfigTypeKind.ENUM:
         return _construct_enum_from_snap(config_type_snap)
     elif config_type_snap.kind == ConfigTypeKind.SELECTOR:

@@ -8,28 +8,28 @@ from .field import Field
 
 
 def get_recursive_type_keys(
-    config_type_snap: "ConfigTypeSnap", config_schema_snapshot: "ConfigSchemaSnapshot"
+    config_type_snap: "ConfigTypeSnap", config_schema_snap: "ConfigSchemaSnap"
 ) -> Set[str]:
     check.inst_param(config_type_snap, "config_type_snap", ConfigTypeSnap)
-    check.inst_param(config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnapshot)
+    check.inst_param(config_schema_snap, "config_schema_snap", ConfigSchemaSnap)
     result_keys = set()
     for type_key in config_type_snap.get_child_type_keys():
         result_keys.add(type_key)
         for recurse_key in get_recursive_type_keys(
-            config_schema_snapshot.get_config_snap(type_key), config_schema_snapshot
+            config_schema_snap.get_config_type_snap(type_key), config_schema_snap
         ):
             result_keys.add(recurse_key)
     return result_keys
 
 
 @whitelist_for_serdes
-class ConfigSchemaSnapshot(
+class ConfigSchemaSnap(
     NamedTuple(
         "_ConfigSchemaSnapshot", [("all_config_snaps_by_key", Mapping[str, "ConfigTypeSnap"])]
     )
 ):
     def __new__(cls, all_config_snaps_by_key: Mapping[str, "ConfigTypeSnap"]):
-        return super(ConfigSchemaSnapshot, cls).__new__(
+        return super(ConfigSchemaSnap, cls).__new__(
             cls,
             all_config_snaps_by_key=check.mapping_param(
                 all_config_snaps_by_key,
@@ -40,14 +40,14 @@ class ConfigSchemaSnapshot(
         )
 
     @property
-    def all_config_keys(self) -> Sequence[str]:
+    def all_config_type_keys(self) -> Sequence[str]:
         return list(self.all_config_snaps_by_key.keys())
 
-    def get_config_snap(self, key: str) -> "ConfigTypeSnap":
+    def get_config_type_snap(self, key: str) -> "ConfigTypeSnap":
         check.str_param(key, "key")
         return self.all_config_snaps_by_key[key]
 
-    def has_config_snap(self, key: str) -> bool:
+    def has_config_type_snap(self, key: str) -> bool:
         check.str_param(key, "key")
         return key in self.all_config_snaps_by_key
 
@@ -80,36 +80,38 @@ class ConfigTypeSnap(
     # * Adding field_aliases
     def __new__(
         cls,
-        kind,
-        key,
-        given_name,
-        description,
-        type_param_keys,
-        enum_values,
-        fields,
+        kind: ConfigTypeKind,
+        key: str,
+        given_name: Optional[str],
+        description: Optional[str],
+        type_param_keys: Optional[Sequence[str]],
+        enum_values: Optional[Sequence["ConfigEnumValueSnap"]],
+        fields: Optional[Sequence["ConfigFieldSnap"]],
         # Old version of object will not have these properties
-        scalar_kind=None,
-        field_aliases=None,
+        scalar_kind: Optional[ConfigScalarKind] = None,
+        field_aliases: Optional[Mapping[str, str]] = None,
     ):
         return super(ConfigTypeSnap, cls).__new__(
             cls,
             kind=check.inst_param(kind, "kind", ConfigTypeKind),
             key=check.str_param(key, "key"),
             given_name=check.opt_str_param(given_name, "given_name"),
-            type_param_keys=None
-            if type_param_keys is None
-            else check.list_param(type_param_keys, "type_param_keys", of_type=str),
-            enum_values=None
-            if enum_values is None
-            else check.list_param(enum_values, "enum_values", of_type=ConfigEnumValueSnap),
-            fields=None
-            if fields is None
-            else sorted(
-                check.list_param(fields, "field", of_type=ConfigFieldSnap), key=lambda ct: ct.name
+            type_param_keys=check.opt_nullable_sequence_param(
+                type_param_keys, "type_param_keys", str
             ),
+            enum_values=check.opt_nullable_sequence_param(
+                enum_values, "enum_values", ConfigEnumValueSnap
+            ),
+            fields=sorted(
+                check.opt_sequence_param(fields, "field", of_type=ConfigFieldSnap),
+                key=lambda ct: check.not_none(ct.name),
+            )
+            or None,
             description=check.opt_str_param(description, "description"),
             scalar_kind=check.opt_inst_param(scalar_kind, "scalar_kind", ConfigScalarKind),
-            field_aliases=check.opt_dict_param(field_aliases, "field_aliases"),
+            field_aliases=check.opt_nullable_mapping_param(
+                field_aliases, "field_aliases", key_type=str, value_type=str
+            ),
         )
 
     @property
@@ -173,6 +175,10 @@ class ConfigTypeSnap(
         return bool(self._get_field(name))
 
     @property
+    def has_fields(self) -> bool:
+        return ConfigTypeKind.has_fields(self.kind)
+
+    @property
     def field_names(self) -> Sequence[str]:
         fields = check.is_list(self.fields, of_type=ConfigFieldSnap)
         return [fs.name for fs in fields]
@@ -222,8 +228,15 @@ class ConfigFieldSnap(
         ],
     )
 ):
+
     def __new__(
-        cls, name, type_key, is_required, default_provided, default_value_as_json_str, description
+            cls,
+            name: Optional[str],
+            type_key: str,
+            is_required: bool,
+            default_provided: bool,
+            default_value_as_json_str: Optional[str],
+            description: Optional[str],
     ):
         return super(ConfigFieldSnap, cls).__new__(
             cls,
@@ -238,7 +251,7 @@ class ConfigFieldSnap(
         )
 
 
-def snap_from_field(name: str, field: Field):
+def snap_from_field(name: str, field: Field) -> ConfigFieldSnap:
     return ConfigFieldSnap(
         name=name,
         type_key=field.config_type.key,
@@ -279,10 +292,10 @@ def snap_from_config_type(config_type: ConfigType) -> ConfigTypeSnap:
 
 
 def minimal_config_for_type_snap(
-    config_schema_snap: ConfigSchemaSnapshot, config_type_snap: ConfigTypeSnap
+    config_schema_snap: ConfigSchemaSnap, config_type_snap: ConfigTypeSnap
 ) -> Any:
 
-    check.inst_param(config_schema_snap, "config_schema_snap", ConfigSchemaSnapshot)
+    check.inst_param(config_schema_snap, "config_schema_snap", ConfigSchemaSnap)
     check.inst_param(config_type_snap, "config_type_snap", ConfigTypeSnap)
 
     if ConfigTypeKind.has_fields(config_type_snap.kind):
@@ -294,7 +307,7 @@ def minimal_config_for_type_snap(
                 continue
 
             default_dict[field.name] = minimal_config_for_type_snap(
-                config_schema_snap, config_schema_snap.get_config_snap(field.type_key)
+                config_schema_snap, config_schema_snap.get_config_type_snap(field.type_key)
             )
         return default_dict
     elif config_type_snap.kind == ConfigTypeKind.ANY:
@@ -315,7 +328,7 @@ def minimal_config_for_type_snap(
     elif config_type_snap.kind == ConfigTypeKind.SCALAR_UNION:
         return minimal_config_for_type_snap(
             config_schema_snap,
-            config_schema_snap.get_config_snap(config_type_snap.type_param_keys[0]),  # type: ignore
+            config_schema_snap.get_config_type_snap(config_type_snap.type_param_keys[0]),  # type: ignore
         )
     else:
         return "<unknown>"

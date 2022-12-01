@@ -16,7 +16,7 @@ from typing_extensions import TypeAlias, get_origin
 
 import dagster._check as check
 from dagster._annotations import public
-from dagster._config.config_schema import UserConfigSchema
+from dagster._config.config_schema import ConfigSchema
 from dagster._core.definitions.policy import RetryPolicy
 from dagster._core.errors import DagsterInvariantViolationError
 from dagster._utils.backcompat import canonicalize_backcompat_args, deprecation_warning
@@ -94,7 +94,7 @@ class OpDefinition(SolidDefinition):
         ins: Optional[Mapping[str, In]] = None,
         outs: Optional[Mapping[str, Out]] = None,
         description: Optional[str] = None,
-        config_schema: Optional[Union[UserConfigSchema, IDefinitionConfigSchema]] = None,
+        config_schema: Optional[Union[ConfigSchema, IDefinitionConfigSchema]] = None,
         required_resource_keys: Optional[AbstractSet[str]] = None,
         tags: Optional[Mapping[str, Any]] = None,
         version: Optional[str] = None,
