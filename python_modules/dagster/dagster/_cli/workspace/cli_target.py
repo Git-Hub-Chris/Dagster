@@ -233,6 +233,7 @@ def get_workspace_load_target(kwargs: ClickArgMapping):
             socket=None,
             host=check.opt_str_elem(kwargs, "grpc_host") or "localhost",
             location_name=None,
+            use_ssl=check.bool_elem(kwargs, "use_ssl"),
         )
     elif kwargs.get("grpc_socket"):
         _check_cli_arguments_none(
@@ -245,6 +246,7 @@ def get_workspace_load_target(kwargs: ClickArgMapping):
             socket=check.str_elem(kwargs, "grpc_socket"),
             host=check.opt_str_elem(kwargs, "grpc_host") or "localhost",
             location_name=None,
+            use_ssl=check.bool_elem(kwargs, "use_ssl"),
         )
     else:
         _cli_load_invariant(False)
