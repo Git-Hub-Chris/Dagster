@@ -50,8 +50,8 @@ def create_and_launch_partition_backfill(
     tags = {t["key"]: t["value"] for t in backfill_params.get("tags", [])}
     backfill_timestamp = pendulum.now("UTC").timestamp()
 
-    if backfill_params.get("selector") is not None:  # job backfill
-        partition_set_selector = backfill_params["selector"]
+    partition_set_selector = backfill_params["selector"]
+    if partition_set_selector is not None:
         partition_set_name = partition_set_selector.get("partitionSetName")
         repository_selector = RepositorySelector.from_graphql_input(
             partition_set_selector.get("repositorySelector")
@@ -76,7 +76,13 @@ def create_and_launch_partition_backfill(
             .format(num=len(matches), partition_set_name=partition_set_name),
         )
         external_partition_set = next(iter(matches))
+        partition_set_origin = external_partition_set.get_external_origin()
+    else:
+        location = None
+        external_partition_set = None
+        partition_set_origin = None
 
+    if asset_selection is None:  # job backfill
         if backfill_params.get("allPartitions"):
             result = graphene_info.context.get_external_partition_names(
                 external_partition_set, instance=graphene_info.context.instance
@@ -94,7 +100,7 @@ def create_and_launch_partition_backfill(
 
         backfill = PartitionBackfill(
             backfill_id=backfill_id,
-            partition_set_origin=external_partition_set.get_external_origin(),
+            partition_set_origin=partition_set_origin,
             status=BulkActionStatus.REQUESTED,
             partition_names=partition_names,
             from_failure=bool(backfill_params.get("fromFailure")),
@@ -125,17 +131,15 @@ def create_and_launch_partition_backfill(
             return GrapheneLaunchBackfillSuccess(
                 backfill_id=backfill_id, launched_run_ids=submitted_run_ids
             )
-    elif asset_selection is not None:  # pure asset backfill
+    else:
         if backfill_params.get("forceSynchronousSubmission"):
-            raise DagsterError(
-                "forceSynchronousSubmission is not supported for pure asset backfills"
-            )
+            raise DagsterError("forceSynchronousSubmission is not supported for asset backfills")
 
         if backfill_params.get("fromFailure"):
-            raise DagsterError("fromFailure is not supported for pure asset backfills")
+            raise DagsterError("fromFailure is not supported for asset backfills")
 
         if backfill_params.get("allPartitions"):
-            raise DagsterError("allPartitions is not supported for pure asset backfills")
+            raise DagsterError("allPartitions is not supported for asset backfills")
 
         asset_graph = ExternalAssetGraph.from_workspace(graphene_info.context)
 
@@ -157,16 +161,13 @@ def create_and_launch_partition_backfill(
 
         backfill = PartitionBackfill.from_asset_partitions(
             asset_graph=asset_graph,
+            partition_set_origin=partition_set_origin,
             backfill_id=backfill_id,
             tags=tags,
             backfill_timestamp=backfill_timestamp,
             asset_selection=asset_selection,
             partition_names=backfill_params["partitionNames"],
             dynamic_partitions_store=CachingInstanceQueryer(graphene_info.context.instance),
-        )
-    else:
-        raise DagsterError(
-            "Backfill requested without specifying partition set selector or asset selection"
         )
 
     graphene_info.context.instance.add_backfill(backfill)
