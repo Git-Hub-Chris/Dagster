@@ -11,6 +11,7 @@ from typing import (
     NamedTuple,
     Optional,
     Sequence,
+    Type,
     TypeVar,
     Union,
     cast,
@@ -99,7 +100,7 @@ class AssetKey(NamedTuple("_AssetKey", [("path", PublicAttr[Sequence[str]])])):
     def __hash__(self):
         return hash(tuple(self.path))
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, AssetKey):
             return False
         if len(self.path) != len(other.path):
@@ -802,19 +803,15 @@ class ObjectStoreOperation(
     @classmethod
     def serializable(cls, inst, **kwargs):
         return cls(
-            **dict(
-                {
-                    "op": inst.op.value,
-                    "key": inst.key,
-                    "dest_key": inst.dest_key,
-                    "obj": None,
-                    "serialization_strategy_name": inst.serialization_strategy_name,
-                    "object_store_name": inst.object_store_name,
-                    "value_name": inst.value_name,
-                    "version": inst.version,
-                },
-                **kwargs,
-            )
+            op=inst.op.value,
+            key=inst.key,
+            dest_key=inst.dest_key,
+            obj=None,
+            serialization_strategy_name=inst.serialization_strategy_name,
+            object_store_name=inst.object_store_name,
+            value_name=inst.value_name,
+            version=inst.version,
+            **kwargs,
         )
 
 
@@ -833,7 +830,7 @@ class HookExecutionResult(
         return super(HookExecutionResult, cls).__new__(
             cls,
             hook_name=check.str_param(hook_name, "hook_name"),
-            is_skipped=cast(bool, check.opt_bool_param(is_skipped, "is_skipped", default=False)),
+            is_skipped=check.opt_bool_param(is_skipped, "is_skipped", default=False),
         )
 
 
