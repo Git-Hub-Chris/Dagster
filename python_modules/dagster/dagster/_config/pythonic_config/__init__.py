@@ -213,15 +213,19 @@ class Config(MakeConfigCacheable):
         """
         modified_data = {}
         for key, value in config_dict.items():
+            actual_value = value
+            if isinstance(value, _FixedConfig):
+                actual_value = value.get_value()
+
             field = self.__fields__.get(key)
             if field and field.field_info.discriminator:
-                nested_dict = value
+                nested_dict = actual_value
 
                 discriminator_key = check.not_none(field.discriminator_key)
-                if isinstance(value, Config):
+                if isinstance(actual_value, Config):
                     nested_dict = _discriminated_union_config_dict_to_selector_config_dict(
                         discriminator_key,
-                        value._get_non_none_public_field_values(),  # noqa: SLF001
+                        actual_value._get_non_none_public_field_values(),  # noqa: SLF001
                     )
 
                 nested_items = list(check.is_dict(nested_dict).items())
@@ -236,7 +240,7 @@ class Config(MakeConfigCacheable):
                     discriminator_key: discriminated_value,
                 }
             else:
-                modified_data[key] = value
+                modified_data[key] = actual_value
         super().__init__(**modified_data)
 
     def _convert_to_config_dictionary(self) -> Mapping[str, Any]:
@@ -759,9 +763,12 @@ class ConfigurableResourceFactory(
 
     def __init__(self, **data: Any):
         resource_pointers, data_without_resources = separate_resource_params(data)
-
+        secret_fields = {
+            k for k, v in data_without_resources.items() if isinstance(v, _FixedConfig)
+        }
         schema = infer_schema_from_config_class(
-            self.__class__, fields_to_omit=set(resource_pointers.keys())
+            self.__class__,
+            fields_to_omit=set(resource_pointers.keys()).union(secret_fields),
         )
 
         # Populate config values
@@ -775,6 +782,9 @@ class ConfigurableResourceFactory(
             if k in data_without_resources
         }
         resolved_config_dict = config_dictionary_from_values(casted_data_without_resources, schema)
+        resolved_config_dict_with_secrets_removed = {
+            k: v for k, v in resolved_config_dict.items() if k not in secret_fields
+        }
 
         self._state__internal__ = ConfigurableResourceFactoryState(
             # We keep track of any resources we depend on which are not fully configured
@@ -784,7 +794,7 @@ class ConfigurableResourceFactory(
             },
             resolved_config_dict=resolved_config_dict,
             # These are unfortunately named very similarily
-            config_schema=_curry_config_schema(schema, resolved_config_dict),
+            config_schema=_curry_config_schema(schema, resolved_config_dict_with_secrets_removed),
             schema=schema,
             nested_resources={k: v for k, v in resource_pointers.items()},
             resource_context=None,
@@ -1832,3 +1842,18 @@ def validate_resource_annotated_function(fn) -> None:
                 else "'ResourceParam[Any]' or 'ResourceParam[<output type>]'",
             )
         )
+
+
+class _FixedConfig:
+    def __init__(self, value: Any):
+        self._value = value
+
+    def get_value(self) -> Any:
+        return self._value
+
+
+C = TypeVar("C")
+
+
+def FixedConfig(value: C) -> C:
+    return _FixedConfig(value)  # type: ignore
