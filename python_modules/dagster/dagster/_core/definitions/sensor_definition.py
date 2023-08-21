@@ -341,6 +341,19 @@ class SensorEvaluationContext:
         """Optional[RepositoryDefinition]: The RepositoryDefinition that this sensor resides in."""
         return self._repository_def
 
+    @public
+    @property
+    def defs(self) -> Optional["Definitions"]:
+        from dagster._core.definitions.definitions_class import Definitions
+
+        if self._repository_def is None:
+            raise DagsterInvariantViolationError(
+                "Attempting to access defs, but no defs or repository was provided when"
+                " constructing the SensorEvaluationContext"
+            )
+
+        return Definitions.from_repository(self._repository_def)
+
     @property
     def log(self) -> logging.Logger:
         if self._logger:
