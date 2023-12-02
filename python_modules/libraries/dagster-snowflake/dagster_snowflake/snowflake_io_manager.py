@@ -365,7 +365,12 @@ class SnowflakeDbClient(DbClient):
     @staticmethod
     def delete_table_slice(context: OutputContext, table_slice: TableSlice, connection) -> None:
         try:
-            connection.execute(_get_cleanup_statement(table_slice))
+            if table_slice.partition_dimensions and len(table_slice.partition_dimensions) > 0:
+                count = connection.execute(_get_count_statement(table_slice))
+                if count.fetchall()[0][0] > 0:
+                    connection.execute(_get_cleanup_statement(table_slice))
+            else:
+                connection.execute(_get_cleanup_statement(table_slice))
         except ProgrammingError:
             # table doesn't exist yet, so ignore the error
             pass
@@ -393,7 +398,21 @@ def _get_cleanup_statement(table_slice: TableSlice) -> str:
         )
         return query + _partition_where_clause(table_slice.partition_dimensions)
     else:
-        return f"DELETE FROM {table_slice.database}.{table_slice.schema}.{table_slice.table}"
+        return f"TRUNCATE {table_slice.database}.{table_slice.schema}.{table_slice.table}"
+
+
+def _get_count_statement(table_slice: TableSlice) -> str:
+    """Returns a SQL Statement that queries the number of rows affected by the delete statement."""
+    if table_slice.partition_dimensions and len(table_slice.partition_dimensions) > 0:
+        query = (
+            "SELECT COUNT(*) FROM"
+            f" {table_slice.database}.{table_slice.schema}.{table_slice.table} WHERE\n"
+        )
+        return query + _partition_where_clause(table_slice.partition_dimensions)
+    else:
+        return (
+            f"SELECT COUNT(*) FROM {table_slice.database}.{table_slice.schema}.{table_slice.table}"
+        )
 
 
 def _partition_where_clause(partition_dimensions: Sequence[TablePartitionDimension]) -> str:
