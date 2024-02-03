@@ -134,7 +134,7 @@ setup(
             "morefs[asynclocal]; python_version>='3.8'",
         ],
         "mypy": [
-            "mypy==0.991",
+            "mypy==1.8",
         ],
         "pyright": [
             "pyright==1.1.339",
