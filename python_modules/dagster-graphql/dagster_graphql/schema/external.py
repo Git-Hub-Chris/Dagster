@@ -6,6 +6,7 @@ from dagster import (
     DagsterInstance,
     _check as check,
 )
+from dagster._core.definitions.asset_graph_differ import AssetGraphDiffer
 from dagster._core.definitions.external_asset_graph import ExternalAssetGraph
 from dagster._core.definitions.partition import CachingDynamicPartitionsLoader
 from dagster._core.host_representation import (
@@ -21,6 +22,7 @@ from dagster._core.host_representation.grpc_server_state_subscriber import (
     LocationStateSubscriber,
 )
 from dagster._core.workspace.context import (
+    BaseWorkspaceRequestContext,
     WorkspaceProcessContext,
 )
 from dagster._core.workspace.workspace import (
@@ -115,7 +117,7 @@ class GrapheneRepositoryLocation(graphene.ObjectType):
 
     def resolve_repositories(self, graphene_info: ResolveInfo):
         return [
-            GrapheneRepository(graphene_info.context.instance, repository, self._location)
+            GrapheneRepository(graphene_info.context, repository, self._location)
             for repository in self._location.get_repositories().values()
         ]
 
@@ -252,10 +254,11 @@ class GrapheneRepository(graphene.ObjectType):
 
     def __init__(
         self,
-        instance: DagsterInstance,
+        workspace_context: BaseWorkspaceRequestContext,
         repository: ExternalRepository,
         repository_location: CodeLocation,
     ):
+        instance = workspace_context.instance
         self._repository = check.inst_param(repository, "repository", ExternalRepository)
         self._repository_location = check.inst_param(
             repository_location, "repository_location", CodeLocation
@@ -267,6 +270,17 @@ class GrapheneRepository(graphene.ObjectType):
             asset_graph=lambda: ExternalAssetGraph.from_external_repository(repository),
         )
         self._dynamic_partitions_loader = CachingDynamicPartitionsLoader(instance)
+
+        self._asset_graph_differ = None
+        base_deployment_context = workspace_context.get_base_deployment_context()
+        if base_deployment_context is not None:
+            # then we are in a branch deployment
+            self._asset_graph_differ = AssetGraphDiffer.from_external_repositories(
+                code_location_name=self._repository_location.name,
+                repository_name=self._repository.name,
+                branch_workspace=workspace_context,
+                base_workspace=base_deployment_context,
+            )
         super().__init__(name=repository.name)
 
     def resolve_id(self, _graphene_info: ResolveInfo):
@@ -355,6 +369,7 @@ class GrapheneRepository(graphene.ObjectType):
                 asset_checks_loader=asset_checks_loader,
                 stale_status_loader=self._stale_status_loader,
                 dynamic_partitions_loader=self._dynamic_partitions_loader,
+                asset_graph_differ=self._asset_graph_differ,
             )
             for external_asset_node in self._repository.get_external_asset_nodes()
         ]

@@ -816,6 +816,9 @@ class DagsterInstance(DynamicPartitionsStore):
     def get_sensor_settings(self) -> Mapping[str, Any]:
         return self.get_settings("sensors")
 
+    def get_auto_materialize_settings(self) -> Mapping[str, Any]:
+        return self.get_settings("auto_materialize")
+
     @property
     def telemetry_enabled(self) -> bool:
         if self.is_ephemeral:
@@ -907,7 +910,7 @@ class DagsterInstance(DynamicPartitionsStore):
 
     @property
     def run_retries_max_retries(self) -> int:
-        return self.get_settings("run_retries").get("max_retries")
+        return self.get_settings("run_retries").get("max_retries", 0)
 
     @property
     def auto_materialize_enabled(self) -> bool:
@@ -1231,6 +1234,17 @@ class DagsterInstance(DynamicPartitionsStore):
             else None
         )
 
+        if execution_plan_snapshot:
+            from ..op_concurrency_limits_counter import (
+                compute_run_op_concurrency_info_for_snapshot,
+            )
+
+            run_op_concurrency = compute_run_op_concurrency_info_for_snapshot(
+                execution_plan_snapshot
+            )
+        else:
+            run_op_concurrency = None
+
         return DagsterRun(
             job_name=job_name,
             run_id=run_id,
@@ -1250,6 +1264,7 @@ class DagsterInstance(DynamicPartitionsStore):
             job_code_origin=job_code_origin,
             has_repository_load_data=execution_plan_snapshot is not None
             and execution_plan_snapshot.repository_load_data is not None,
+            run_op_concurrency=run_op_concurrency,
         )
 
     def _ensure_persisted_job_snapshot(
