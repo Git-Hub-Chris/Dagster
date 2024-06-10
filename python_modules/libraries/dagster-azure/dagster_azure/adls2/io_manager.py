@@ -2,6 +2,7 @@ import pickle
 from contextlib import contextmanager
 from typing import Any, Iterator, Union
 
+from azure.storage.filedatalake import DataLakeLeaseClient
 from dagster import (
     InputContext,
     OutputContext,
@@ -19,16 +20,17 @@ from pydantic import Field
 from upath import UPath
 
 from dagster_azure.adls2.resources import ADLS2Resource
-from dagster_azure.adls2.utils import ResourceNotFoundError
+from dagster_azure.adls2.utils import DataLakeServiceClient, ResourceNotFoundError
+from dagster_azure.blob.utils import BlobServiceClient
 
 
 class PickledObjectADLS2IOManager(UPathIOManager):
     def __init__(
         self,
-        file_system: Any,
-        adls2_client: Any,
-        blob_client: Any,
-        lease_client_constructor: Any,
+        file_system: str,
+        adls2_client: DataLakeServiceClient,
+        blob_client: BlobServiceClient,
+        lease_client_constructor: DataLakeLeaseClient,
         prefix: str = "dagster",
         lease_duration: int = 60,
     ):
@@ -80,7 +82,7 @@ class PickledObjectADLS2IOManager(UPathIOManager):
 
     @contextmanager
     def _acquire_lease(self, client: Any, is_rm: bool = False) -> Iterator[str]:
-        lease_client = self.lease_client_constructor(client=client)
+        lease_client = self.lease_client_constructor(client=client)  # type: ignore
         try:
             lease_client.acquire(lease_duration=self.lease_duration)
             yield lease_client.id
@@ -217,7 +219,7 @@ class ConfigurablePickledObjectADLS2IOManager(ADLS2PickleIOManager):
     config_schema=ADLS2PickleIOManager.to_config_schema(),
     required_resource_keys={"adls2"},
 )
-def adls2_pickle_io_manager(init_context):
+def adls2_pickle_io_manager(init_context) -> PickledObjectADLS2IOManager:
     """Persistent IO manager using Azure Data Lake Storage Gen2 for storage.
 
     Serializes objects via pickling. Suitable for objects storage for distributed executors, so long
@@ -285,11 +287,10 @@ def adls2_pickle_io_manager(init_context):
     adls2_client = adls_resource.adls2_client
     blob_client = adls_resource.blob_client
     lease_client = adls_resource.lease_client_constructor
-    pickled_io_manager = PickledObjectADLS2IOManager(
+    return PickledObjectADLS2IOManager(
         init_context.resource_config["adls2_file_system"],
         adls2_client,
         blob_client,
         lease_client,
         init_context.resource_config.get("adls2_prefix"),
     )
-    return pickled_io_manager
