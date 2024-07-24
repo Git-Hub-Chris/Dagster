@@ -49,7 +49,9 @@ from dagster._core.definitions.metadata import TableMetadataSet, TextMetadataVal
 from dagster._core.errors import DagsterExecutionInterruptedError, DagsterInvalidPropertyError
 from dagster._core.execution.context.init import InitResourceContext
 from dagster._model.pydantic_compat_layer import compat_model_validator
+from dagster._record import record
 from dagster._utils import pushd
+from dagster._utils.warnings import disable_dagster_warnings
 from dbt.adapters.base.impl import BaseAdapter, BaseColumn, BaseRelation
 from dbt.adapters.factory import get_adapter, register_adapter, reset_adapters
 from dbt.config import RuntimeConfig
@@ -161,7 +163,7 @@ class DbtCliInvocation:
     )
 
     def _get_columns_from_dbt_resource_props(
-        self, adapter: BaseAdapter, dbt_resource_props: Dict[str, Any]
+        self, adapter: BaseAdapter, dbt_resource_props: Mapping[str, Any]
     ) -> RelationData:
         """Given a dbt resource properties dictionary, fetches the resource's column metadata from
         the database, or returns the cached metadata if it has already been fetched.
@@ -538,9 +540,40 @@ def _get_relation_from_adapter(adapter: BaseAdapter, relation_key: RelationKey) 
     )
 
 
+@experimental
+@record
+class DbtAttachMetadataContext:
+    """Context used for attaching metadata to dbt events, passed to metadata
+    functions which are used with the `DbtEventIterator.attach_metadata` method.
+
+    The structure of this class is experimental and subject to change; avoid
+    directly instantiating this class.
+    """
+
+    event: Union[Output, AssetMaterialization, AssetCheckResult, AssetObservation]
+    invocation: DbtCliInvocation
+    dbt_resource_props: Mapping[str, Any]
+
+    @public
+    @property
+    def adapter(self) -> BaseAdapter:
+        """Dbt adapter which can be used to interact with
+        the underlying database.
+        """
+        return check.not_none(self.invocation.adapter)
+
+    @public
+    @property
+    def relation_name(self) -> str:
+        """The name of the relation in the database, which can be used to
+        query the created table or view.
+        """
+        return self.dbt_resource_props["relation_name"]
+
+
 def _fetch_column_metadata(
-    invocation: DbtCliInvocation, event: DbtDagsterEventType, with_column_lineage: bool
-) -> Optional[Dict[str, Any]]:
+    ctx: DbtAttachMetadataContext, with_column_lineage: bool
+) -> Optional[Mapping[str, Any]]:
     """Threaded task which fetches column schema and lineage metadata for dbt models in a dbt
     run once they are built, returning the metadata to be attached.
 
@@ -553,9 +586,10 @@ def _fetch_column_metadata(
         event (DbtDagsterEventType): The dbt event to append column metadata to.
         with_column_lineage (bool): Whether to include column lineage metadata in the event.
     """
-    adapter = check.not_none(invocation.adapter)
+    invocation = ctx.invocation
+    adapter = ctx.adapter
 
-    dbt_resource_props = _get_dbt_resource_props_from_event(invocation, event)
+    dbt_resource_props = ctx.dbt_resource_props
 
     with adapter.connection_named(f"column_metadata_{dbt_resource_props['unique_id']}"):
         try:
@@ -633,19 +667,15 @@ def _fetch_column_metadata(
         }
 
 
-def _fetch_row_count_metadata(
-    invocation: DbtCliInvocation,
-    event: DbtDagsterEventType,
-) -> Optional[Dict[str, Any]]:
+def _fetch_row_count_metadata(ctx: DbtAttachMetadataContext) -> Optional[Mapping[str, Any]]:
     """Threaded task which fetches row counts for materialized dbt models in a dbt run
     once they are built, and attaches the row count as metadata to the event.
     """
-    if not isinstance(event, (AssetMaterialization, Output)):
+    if not isinstance(ctx.event, (AssetMaterialization, Output)):
         return None
+    adapter = ctx.adapter
 
-    adapter = check.not_none(invocation.adapter)
-
-    dbt_resource_props = _get_dbt_resource_props_from_event(invocation, event)
+    dbt_resource_props = ctx.dbt_resource_props
     is_view = dbt_resource_props["config"]["materialized"] == "view"
 
     # Avoid counting rows for views, since they may include complex SQL queries
@@ -656,7 +686,6 @@ def _fetch_row_count_metadata(
 
     unique_id = dbt_resource_props["unique_id"]
     logger.debug("Fetching row count for %s", unique_id)
-    relation_name = dbt_resource_props["relation_name"]
 
     try:
         with adapter.connection_named(f"row_count_{unique_id}"):
@@ -665,7 +694,7 @@ def _fetch_row_count_metadata(
                     SELECT
                     count(*) as row_count
                     FROM
-                    {relation_name}
+                    {ctx.relation_name}
                 """,
                 fetch=True,
             )
@@ -719,7 +748,8 @@ class DbtEventIterator(Generic[T], abc.Iterator):
                 A set of corresponding Dagster events for dbt models, with row counts attached,
                 yielded in the order they are emitted by dbt.
         """
-        return self._attach_metadata(_fetch_row_count_metadata)
+        with disable_dagster_warnings():
+            return self.attach_metadata(_fetch_row_count_metadata)
 
     @public
     @experimental
@@ -741,21 +771,23 @@ class DbtEventIterator(Generic[T], abc.Iterator):
                 A set of corresponding Dagster events for dbt models, with column metadata attached,
                 yielded in the order they are emitted by dbt.
         """
-        fetch_metadata = lambda invocation, event: _fetch_column_metadata(
-            invocation, event, with_column_lineage
-        )
-        return self._attach_metadata(fetch_metadata)
+        with disable_dagster_warnings():
+            fetch_metadata = lambda ctx: _fetch_column_metadata(ctx, with_column_lineage)
+            return self.attach_metadata(fetch_metadata)
 
-    def _attach_metadata(
+    @public
+    @experimental
+    def attach_metadata(
         self,
-        fn: Callable[[DbtCliInvocation, DbtDagsterEventType], Optional[Dict[str, Any]]],
+        fn: Callable[[DbtAttachMetadataContext], Optional[Mapping[str, Any]]],
     ) -> "DbtEventIterator[DbtDagsterEventType]":
         """Runs a threaded task to attach metadata to each event in the iterator.
 
         Args:
-            fn (Callable[[DbtCliInvocation, DbtDagsterEventType], Optional[Dict[str, Any]]]):
-                A function which takes a DbtCliInvocation and a DbtDagsterEventType and returns
-                a dictionary of metadata to attach to the event.
+            fn (Callable[[DbtAttachMetadataContext], Optional[Dict[str, Any]]):
+                A function which takes various contextual information about an event
+                and returns a dictionary of metadata to attach. If the function
+                returns None, then no metadata will be attached.
 
         Returns:
              Iterator[Union[Output, AssetMaterialization, AssetObservation, AssetCheckResult]]:
@@ -764,7 +796,15 @@ class DbtEventIterator(Generic[T], abc.Iterator):
         """
 
         def _map_fn(event: DbtDagsterEventType) -> DbtDagsterEventType:
-            result = fn(self._dbt_cli_invocation, event)
+            with disable_dagster_warnings():
+                ctx = DbtAttachMetadataContext(
+                    event=event,
+                    invocation=self._dbt_cli_invocation,
+                    dbt_resource_props=_get_dbt_resource_props_from_event(
+                        self._dbt_cli_invocation, event
+                    ),
+                )
+            result = fn(ctx)
             if result is None:
                 return event
 
