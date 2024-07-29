@@ -999,6 +999,19 @@ class SensorDefinition(IHasInternalInit):
                 )
 
             if run_request.partition_key and not run_request.has_resolved_partition():
+                if run_request.asset_selection:
+                    asset_graph = check.not_none(context.repository_def).asset_graph
+                    partitions_defs = {
+                        asset_graph.get(k).partitions_def for k in run_request.asset_selection
+                    }
+                    defined_partitions_defs = {pd for pd in partitions_defs if pd is not None}
+                    check.invariant(
+                        len({pd for pd in defined_partitions_defs if pd}) == 1,
+                        "All selected assets must have the same or no partitions definition",
+                    )
+                    partitions_def = next(iter(defined_partitions_defs))
+                else:
+                    partitions_def = None
                 selected_job = _get_repo_job_by_name(
                     context, run_request.job_name if run_request.job_name else target_names[0]
                 )
@@ -1008,6 +1021,7 @@ class SensorDefinition(IHasInternalInit):
                         current_time=None,
                         dynamic_partitions_store=dynamic_partitions_store,
                         dynamic_partitions_requests=dynamic_partitions_requests,
+                        partitions_def=partitions_def,
                     )
                 )
             else:
@@ -1366,10 +1380,10 @@ def _run_requests_with_base_asset_jobs(
         else:
             asset_keys = outer_asset_selection.resolve(asset_graph)
 
-        base_job = context.repository_def.get_implicit_job_def_for_assets(asset_keys)  # type: ignore  # (possible none)
+        base_job = check.not_none(context.repository_def).get_implicit_global_asset_job_def()
         result.append(
             run_request.with_replaced_attrs(
-                job_name=base_job.name,  # type: ignore  # (possible none)
+                job_name=base_job.name,
                 asset_selection=list(asset_keys),
             )
         )
