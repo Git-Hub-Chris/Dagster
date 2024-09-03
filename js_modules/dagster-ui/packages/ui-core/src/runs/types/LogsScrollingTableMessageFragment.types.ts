@@ -1947,6 +1947,24 @@ export type LogsScrollingTableMessageFragment_ObservationEvent = {
   assetKey: {__typename: 'AssetKey'; path: Array<string>} | null;
 };
 
+export type LogsScrollingTableMessageFragment_PlannedAssetMaterializationFailureEvent = {
+  __typename: 'PlannedAssetMaterializationFailureEvent';
+  message: string;
+  eventType: Types.DagsterEventType | null;
+  timestamp: string;
+  level: Types.LogLevel;
+  stepKey: string | null;
+};
+
+export type LogsScrollingTableMessageFragment_PlannedAssetMaterializationSkippedEvent = {
+  __typename: 'PlannedAssetMaterializationSkippedEvent';
+  message: string;
+  eventType: Types.DagsterEventType | null;
+  timestamp: string;
+  level: Types.LogLevel;
+  stepKey: string | null;
+};
+
 export type LogsScrollingTableMessageFragment_ResourceInitFailureEvent = {
   __typename: 'ResourceInitFailureEvent';
   message: string;
@@ -3030,6 +3048,8 @@ export type LogsScrollingTableMessageFragment =
   | LogsScrollingTableMessageFragment_MaterializationEvent
   | LogsScrollingTableMessageFragment_ObjectStoreOperationEvent
   | LogsScrollingTableMessageFragment_ObservationEvent
+  | LogsScrollingTableMessageFragment_PlannedAssetMaterializationFailureEvent
+  | LogsScrollingTableMessageFragment_PlannedAssetMaterializationSkippedEvent
   | LogsScrollingTableMessageFragment_ResourceInitFailureEvent
   | LogsScrollingTableMessageFragment_ResourceInitStartedEvent
   | LogsScrollingTableMessageFragment_ResourceInitSuccessEvent

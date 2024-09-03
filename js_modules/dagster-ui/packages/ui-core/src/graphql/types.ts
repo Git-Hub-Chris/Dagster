@@ -952,6 +952,8 @@ export enum DagsterEventType {
   PIPELINE_START = 'PIPELINE_START',
   PIPELINE_STARTING = 'PIPELINE_STARTING',
   PIPELINE_SUCCESS = 'PIPELINE_SUCCESS',
+  PLANNED_ASSET_MATERIALIZATION_FAILURE = 'PLANNED_ASSET_MATERIALIZATION_FAILURE',
+  PLANNED_ASSET_MATERIALIZATION_SKIPPED = 'PLANNED_ASSET_MATERIALIZATION_SKIPPED',
   RESOURCE_INIT_FAILURE = 'RESOURCE_INIT_FAILURE',
   RESOURCE_INIT_STARTED = 'RESOURCE_INIT_STARTED',
   RESOURCE_INIT_SUCCESS = 'RESOURCE_INIT_SUCCESS',
@@ -1008,6 +1010,8 @@ export type DagsterRunEvent =
   | MaterializationEvent
   | ObjectStoreOperationEvent
   | ObservationEvent
+  | PlannedAssetMaterializationFailureEvent
+  | PlannedAssetMaterializationSkippedEvent
   | ResourceInitFailureEvent
   | ResourceInitStartedEvent
   | ResourceInitSuccessEvent
@@ -3665,6 +3669,34 @@ export type PipelineTagAndValues = {
   key: Scalars['String']['output'];
   values: Array<Scalars['String']['output']>;
 };
+
+export type PlannedAssetMaterializationFailureEvent = MessageEvent &
+  RunEvent & {
+    __typename: 'PlannedAssetMaterializationFailureEvent';
+    assetKey: Maybe<AssetKey>;
+    eventType: Maybe<DagsterEventType>;
+    level: LogLevel;
+    message: Scalars['String']['output'];
+    pipelineName: Scalars['String']['output'];
+    runId: Scalars['String']['output'];
+    solidHandleID: Maybe<Scalars['String']['output']>;
+    stepKey: Maybe<Scalars['String']['output']>;
+    timestamp: Scalars['String']['output'];
+  };
+
+export type PlannedAssetMaterializationSkippedEvent = MessageEvent &
+  RunEvent & {
+    __typename: 'PlannedAssetMaterializationSkippedEvent';
+    assetKey: Maybe<AssetKey>;
+    eventType: Maybe<DagsterEventType>;
+    level: LogLevel;
+    message: Scalars['String']['output'];
+    pipelineName: Scalars['String']['output'];
+    runId: Scalars['String']['output'];
+    solidHandleID: Maybe<Scalars['String']['output']>;
+    stepKey: Maybe<Scalars['String']['output']>;
+    timestamp: Scalars['String']['output'];
+  };
 
 export type PresetNotFoundError = Error & {
   __typename: 'PresetNotFoundError';
@@ -11784,6 +11816,73 @@ export const buildPipelineTagAndValues = (
     __typename: 'PipelineTagAndValues',
     key: overrides && overrides.hasOwnProperty('key') ? overrides.key! : 'repudiandae',
     values: overrides && overrides.hasOwnProperty('values') ? overrides.values! : [],
+  };
+};
+
+export const buildPlannedAssetMaterializationFailureEvent = (
+  overrides?: Partial<PlannedAssetMaterializationFailureEvent>,
+  _relationshipsToOmit: Set<string> = new Set(),
+): {
+  __typename: 'PlannedAssetMaterializationFailureEvent';
+} & PlannedAssetMaterializationFailureEvent => {
+  const relationshipsToOmit: Set<string> = new Set(_relationshipsToOmit);
+  relationshipsToOmit.add('PlannedAssetMaterializationFailureEvent');
+  return {
+    __typename: 'PlannedAssetMaterializationFailureEvent',
+    assetKey:
+      overrides && overrides.hasOwnProperty('assetKey')
+        ? overrides.assetKey!
+        : relationshipsToOmit.has('AssetKey')
+        ? ({} as AssetKey)
+        : buildAssetKey({}, relationshipsToOmit),
+    eventType:
+      overrides && overrides.hasOwnProperty('eventType')
+        ? overrides.eventType!
+        : DagsterEventType.ALERT_FAILURE,
+    level: overrides && overrides.hasOwnProperty('level') ? overrides.level! : LogLevel.CRITICAL,
+    message: overrides && overrides.hasOwnProperty('message') ? overrides.message! : 'perferendis',
+    pipelineName:
+      overrides && overrides.hasOwnProperty('pipelineName')
+        ? overrides.pipelineName!
+        : 'perspiciatis',
+    runId: overrides && overrides.hasOwnProperty('runId') ? overrides.runId! : 'aliquid',
+    solidHandleID:
+      overrides && overrides.hasOwnProperty('solidHandleID') ? overrides.solidHandleID! : 'quas',
+    stepKey: overrides && overrides.hasOwnProperty('stepKey') ? overrides.stepKey! : 'laborum',
+    timestamp: overrides && overrides.hasOwnProperty('timestamp') ? overrides.timestamp! : 'illo',
+  };
+};
+
+export const buildPlannedAssetMaterializationSkippedEvent = (
+  overrides?: Partial<PlannedAssetMaterializationSkippedEvent>,
+  _relationshipsToOmit: Set<string> = new Set(),
+): {
+  __typename: 'PlannedAssetMaterializationSkippedEvent';
+} & PlannedAssetMaterializationSkippedEvent => {
+  const relationshipsToOmit: Set<string> = new Set(_relationshipsToOmit);
+  relationshipsToOmit.add('PlannedAssetMaterializationSkippedEvent');
+  return {
+    __typename: 'PlannedAssetMaterializationSkippedEvent',
+    assetKey:
+      overrides && overrides.hasOwnProperty('assetKey')
+        ? overrides.assetKey!
+        : relationshipsToOmit.has('AssetKey')
+        ? ({} as AssetKey)
+        : buildAssetKey({}, relationshipsToOmit),
+    eventType:
+      overrides && overrides.hasOwnProperty('eventType')
+        ? overrides.eventType!
+        : DagsterEventType.ALERT_FAILURE,
+    level: overrides && overrides.hasOwnProperty('level') ? overrides.level! : LogLevel.CRITICAL,
+    message: overrides && overrides.hasOwnProperty('message') ? overrides.message! : 'culpa',
+    pipelineName:
+      overrides && overrides.hasOwnProperty('pipelineName') ? overrides.pipelineName! : 'quas',
+    runId: overrides && overrides.hasOwnProperty('runId') ? overrides.runId! : 'molestias',
+    solidHandleID:
+      overrides && overrides.hasOwnProperty('solidHandleID') ? overrides.solidHandleID! : 'et',
+    stepKey: overrides && overrides.hasOwnProperty('stepKey') ? overrides.stepKey! : 'aut',
+    timestamp:
+      overrides && overrides.hasOwnProperty('timestamp') ? overrides.timestamp! : 'aperiam',
   };
 };
 

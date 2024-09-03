@@ -338,6 +338,20 @@ export type RunMetadataProviderMessageFragment_ObservationEvent = {
   stepKey: string | null;
 };
 
+export type RunMetadataProviderMessageFragment_PlannedAssetMaterializationFailureEvent = {
+  __typename: 'PlannedAssetMaterializationFailureEvent';
+  message: string;
+  timestamp: string;
+  stepKey: string | null;
+};
+
+export type RunMetadataProviderMessageFragment_PlannedAssetMaterializationSkippedEvent = {
+  __typename: 'PlannedAssetMaterializationSkippedEvent';
+  message: string;
+  timestamp: string;
+  stepKey: string | null;
+};
+
 export type RunMetadataProviderMessageFragment_ResourceInitFailureEvent = {
   __typename: 'ResourceInitFailureEvent';
   message: string;
@@ -472,6 +486,8 @@ export type RunMetadataProviderMessageFragment =
   | RunMetadataProviderMessageFragment_MaterializationEvent
   | RunMetadataProviderMessageFragment_ObjectStoreOperationEvent
   | RunMetadataProviderMessageFragment_ObservationEvent
+  | RunMetadataProviderMessageFragment_PlannedAssetMaterializationFailureEvent
+  | RunMetadataProviderMessageFragment_PlannedAssetMaterializationSkippedEvent
   | RunMetadataProviderMessageFragment_ResourceInitFailureEvent
   | RunMetadataProviderMessageFragment_ResourceInitStartedEvent
   | RunMetadataProviderMessageFragment_ResourceInitSuccessEvent

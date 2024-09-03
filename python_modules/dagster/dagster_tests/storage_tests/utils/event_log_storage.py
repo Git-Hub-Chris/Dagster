@@ -5,6 +5,7 @@ import re
 import string
 import sys
 import time
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, contextmanager
 from typing import List, Optional, Sequence, Tuple, cast
@@ -70,10 +71,14 @@ from dagster._core.events import (
     AssetMaterializationPlannedData,
     AssetObservationData,
     DagsterEvent,
+    DagsterEventBatchMetadata,
     DagsterEventType,
     EngineEventData,
+    PlannedAssetMaterializationFailureData,
+    PlannedAssetMaterializationSkippedData,
     StepExpectationResultData,
     StepMaterializationData,
+    generate_event_batch_id,
 )
 from dagster._core.events.log import EventLogEntry, construct_event_logger
 from dagster._core.execution.api import execute_run
@@ -2743,6 +2748,89 @@ class TestEventLogStorage:
                 latest_storage_ids["p1"] = _store_partition_event(a, "p1")
                 _assert_storage_matches(latest_storage_ids)
 
+    def test_batch_write_planned_asset_materialization_failures_and_skips(self, storage, instance):
+        a = AssetKey(["a"])
+        run_id = make_new_run_id()
+
+        partitions = list(string.ascii_uppercase)
+
+        failed_partitions = {"step_a": set(partitions[:10]), "step_b": set(partitions[10:15])}
+        skipped_partitions = {"step_a": set(partitions[10:15]), "step_b": set(partitions[15:20])}
+
+        failure_events_by_step: List[List[DagsterEvent]] = [
+            [
+                DagsterEvent.build_planned_asset_materialization_failure_event(
+                    job_name="my_fake_job",
+                    step_key=step_key,
+                    planned_asset_materialization_failure_data=PlannedAssetMaterializationFailureData(
+                        asset_key=a, partition=partition, error=None
+                    ),
+                )
+                for partition in partitions
+            ]
+            for step_key, partitions in failed_partitions.items()
+        ]
+
+        failure_events = [event for events in failure_events_by_step for event in events]
+
+        batch_id = generate_event_batch_id()
+        last_index = len(failure_events) - 1
+
+        for i, failure_event in enumerate(failure_events):
+            batch_metadata = DagsterEventBatchMetadata(batch_id, i == last_index)
+            instance.report_dagster_event(failure_event, run_id, batch_metadata=batch_metadata)
+
+        skip_events_by_step: List[List[DagsterEvent]] = [
+            [
+                DagsterEvent.build_planned_asset_materialization_skipped_event(
+                    job_name="my_fake_job",
+                    step_key=step_key,
+                    planned_asset_materialization_skipped_data=PlannedAssetMaterializationSkippedData(
+                        asset_key=a, partition=partition
+                    ),
+                )
+                for partition in partitions
+            ]
+            for step_key, partitions in skipped_partitions.items()
+        ]
+
+        skip_events = [event for events in skip_events_by_step for event in events]
+
+        batch_id = generate_event_batch_id()
+        last_index = len(failure_events) - 1
+
+        for i, skip_event in enumerate(skip_events):
+            batch_metadata = DagsterEventBatchMetadata(batch_id, i == last_index)
+            instance.report_dagster_event(skip_event, run_id, batch_metadata=batch_metadata)
+
+        failure_records = instance.get_records_for_run(
+            run_id=run_id, of_type=DagsterEventType.PLANNED_ASSET_MATERIALIZATION_FAILURE
+        ).records
+
+        assert len(failure_records) == 15
+
+        failed_partitions_by_step_key = defaultdict(set)
+        for record in failure_records:
+            failed_partitions_by_step_key[record.event_log_entry.step_key].add(
+                record.event_log_entry.dagster_event.planned_asset_materialization_failure_data.partition
+            )
+
+        assert failed_partitions_by_step_key == failed_partitions
+
+        skip_records = instance.get_records_for_run(
+            run_id=run_id, of_type=DagsterEventType.PLANNED_ASSET_MATERIALIZATION_SKIPPED
+        ).records
+
+        assert len(skip_records) == 10
+
+        skipped_partitions_by_step_key = defaultdict(set)
+        for record in skip_records:
+            skipped_partitions_by_step_key[record.event_log_entry.step_key].add(
+                record.event_log_entry.dagster_event.planned_asset_materialization_skipped_data.partition
+            )
+
+        assert skipped_partitions_by_step_key == skipped_partitions
+
     @pytest.mark.parametrize(
         "dagster_event_type",
         [DagsterEventType.ASSET_OBSERVATION, DagsterEventType.ASSET_MATERIALIZATION],
@@ -4006,7 +4094,7 @@ class TestEventLogStorage:
                     ascending=False,
                 ).records[0]
 
-                if storage.asset_records_have_last_planned_materialization_storage_id:
+                if storage.asset_records_have_planned_materializations:
                     assert (
                         asset_entry.last_planned_materialization_storage_id
                         == materialization_planned_record.storage_id
