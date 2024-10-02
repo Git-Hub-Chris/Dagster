@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Iterable,
     List,
@@ -44,7 +45,7 @@ from dagster._core.definitions.schedule_definition import ScheduleDefinition
 from dagster._core.definitions.sensor_definition import SensorDefinition
 from dagster._core.definitions.unresolved_asset_job_definition import UnresolvedAssetJobDefinition
 from dagster._core.definitions.utils import dedupe_object_refs
-from dagster._core.errors import DagsterInvariantViolationError
+from dagster._core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster._core.execution.build_resources import wrap_resources_for_execution
 from dagster._core.execution.with_resources import with_resources
 from dagster._core.executor.base import Executor
@@ -750,3 +751,97 @@ class Definitions(IHaveNew):
                 **normalized_metadata,
             },
         )
+
+
+def map_asset_specs(defs: Definitions, fn: Callable[[AssetSpec], AssetSpec]) -> "Definitions":
+    """Applies the given mapping function to every asset spec within this Definitions object,
+    including both external asset specs and asset specs within AssetsDefinitions.
+
+    Returns a new Definitions object with the transformed assets; does not mutate this object.
+
+    Raises an error if the mapping function produces asset specs with new asset keys. map_asset_keys
+    should be used instead if asset keys need to be changed.
+
+    Does not support Definitions  objects that contain CacheableAssetsDefinitions.
+
+    Args:
+        fn (Callable[[AssetSpec], AssetSpec]): A function that accepts an AssetSpec and returns
+            a new AssetSpec.
+
+    Returns:
+        Definitions: A new Definitions object with the transformed assets.
+    """
+    # Don't want to unintentionally trigger a fetch from an external tool
+    for el in defs.assets or []:
+        if isinstance(el, CacheableAssetsDefinition):
+            raise DagsterInvalidDefinitionError(
+                "Can't use map_asset_specs on Definitions objects that contain "
+                "CacheableAssetsDefinitions."
+            )
+
+    assets_defs = defs.get_asset_graph().assets_defs
+    return copy(defs, assets=[assets_def.map_asset_specs(fn) for assets_def in assets_defs])
+
+
+def map_asset_keys(defs: Definitions, fn: Callable[[AssetSpec], AssetKey]) -> "Definitions":
+    """Replaces asset keys for assets within this Definitions object, keeping downstream assets and
+    asset checks in sync.
+
+    Returns a new Definitions object with the transformed assets; does not mutate this object.
+
+    Does not support Definitions  objects that contain CacheableAssetsDefinitions.
+
+    Args:
+        fn (Callable[[AssetSpec], AssetKey]): A function that accepts an AssetSpec and returns
+            a new AssetKey.
+
+    Returns:
+        Definitions: A new Definitions object with the transformed assets.
+    """
+    # Don't want to unintentionally trigger a fetch from an external tool
+    for el in defs.assets or []:
+        if isinstance(el, CacheableAssetsDefinition):
+            raise DagsterInvalidDefinitionError(
+                "Can't use map_asset_specs on Definitions objects that contain "
+                "CacheableAssetsDefinitions."
+            )
+
+    new_keys_by_old_key: Dict[AssetKey, AssetKey] = {}
+
+    assets_defs = defs.get_asset_graph().assets_defs
+    for el in assets_defs:
+        for spec in el.specs:
+            new_key = fn(spec)
+            if new_key != spec.key:
+                new_keys_by_old_key[spec.key] = new_key
+
+    new_assets = [
+        assets_def.with_replaced_asset_keys(new_asset_keys_by_old_asset_key=new_keys_by_old_key)
+        for assets_def in assets_defs
+    ]
+
+    interior_job_object_ids = set()
+
+    new_schedules = []
+    for schedule_def in defs.schedules or []:
+        new_schedules.append(schedule_def.replace_asset_keys(new_keys_by_old_key))
+        if isinstance(schedule_def, ScheduleDefinition):
+            interior_job_object_ids.add(id(schedule_def.target.resolvable_to_job))
+        elif isinstance(schedule_def, UnresolvedPartitionedAssetScheduleDefinition):
+            interior_job_object_ids.add(schedule_def.job)
+
+    new_sensors = []
+    for sensor_def in defs.sensors or []:
+        new_sensors.append(sensor_def.replace_asset_keys(new_keys_by_old_key))
+        interior_job_object_ids.update(
+            id(target.resolvable_to_job) for target in sensor_def.targets
+        )
+
+    new_jobs = [
+        job_def.replace_asset_keys(new_keys_by_old_key)
+        if isinstance(job_def, UnresolvedAssetJobDefinition)
+        else job_def
+        for job_def in defs.jobs or []
+        if id(job_def) not in interior_job_object_ids
+    ]
+    return copy(defs, assets=new_assets, jobs=new_jobs, schedules=new_schedules, asset_checks=[])
