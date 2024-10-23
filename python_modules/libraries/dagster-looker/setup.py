@@ -14,7 +14,7 @@ def get_version() -> str:
 
 ver = get_version()
 # dont pin dev installs to avoid pip dep resolver issues
-pin = "" if ver == "1!0+dev" else f"=={ver}"
+pin = "" if ver == "1!0+dev" or "rc" in ver else f"=={ver}"
 setup(
     name="dagster_looker",
     version=get_version(),
