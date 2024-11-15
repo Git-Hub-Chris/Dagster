@@ -388,6 +388,7 @@ EXAMPLE_PACKAGES_WITH_CUSTOM_CONFIG: List[PackageSpec] = [
     PackageSpec(
         "examples/experimental/dagster-airlift/perf-harness",
         always_run_if=has_dagster_airlift_changes,
+        queue=BuildkiteQueue.DOCKER,
     ),
     PackageSpec(
         "examples/airlift-migration-tutorial",
