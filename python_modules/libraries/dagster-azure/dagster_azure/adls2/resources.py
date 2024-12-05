@@ -5,6 +5,8 @@ from azure.storage.filedatalake import DataLakeLeaseClient
 from dagster import (
     Config,
     ConfigurableResource,
+    Enum,
+    EnumValue,
     Field as DagsterField,
     Permissive,
     Selector,
@@ -42,6 +44,9 @@ class ADLS2BaseResource(ConfigurableResource):
     credential: Union[ADLS2SASToken, ADLS2Key, ADLS2DefaultAzureCredential] = Field(
         discriminator="credential_type", description="The credentials with which to authenticate."
     )
+    cloud_type: Literal["public", "government"] = Field(
+        default="public", description="The Azure Cloud type. Either 'public' or 'government'."
+    )
 
 
 DEFAULT_AZURE_CREDENTIAL_CONFIG = DagsterField(
@@ -52,6 +57,12 @@ DEFAULT_AZURE_CREDENTIAL_CONFIG = DagsterField(
 
 ADLS2_CLIENT_CONFIG = {
     "storage_account": DagsterField(StringSource, description="The storage account name."),
+    "cloud_type": DagsterField(
+        Enum("cloud_type", [EnumValue("public"), EnumValue("government")]),
+        description="The Azure Cloud type. Either 'public' or 'government.'",
+        is_required=False,
+        default_value="public",
+    ),
     "credential": DagsterField(
         Selector(
             {
@@ -89,7 +100,7 @@ class ADLS2Resource(ADLS2BaseResource):
     @property
     @cached_method
     def adls2_client(self) -> DataLakeServiceClient:
-        return create_adls2_client(self.storage_account, self._raw_credential)
+        return create_adls2_client(self.storage_account, self.cloud_type, self._raw_credential)
 
     @property
     @cached_method
@@ -153,6 +164,8 @@ def adls2_resource(context):
                 # or leave the object empty for no arguments
                 DefaultAzureCredential:
                     exclude_environment_credential: true
+                cloud_type: public
+                # str: The Azure Cloud type. Either 'public' or 'government.' Default is 'public'.
 
     """
     return _adls2_resource_from_config(context.resource_config)
@@ -191,6 +204,7 @@ def _adls2_resource_from_config(config) -> ADLS2Resource:
     Returns: An adls2 client.
     """
     storage_account = config["storage_account"]
+    cloud_type = config["cloud_type"]
     if "DefaultAzureCredential" in config["credential"]:
         credential = ADLS2DefaultAzureCredential(
             kwargs=config["credential"]["DefaultAzureCredential"]
@@ -200,4 +214,6 @@ def _adls2_resource_from_config(config) -> ADLS2Resource:
     else:
         credential = ADLS2Key(key=config["credential"]["key"])
 
-    return ADLS2Resource(storage_account=storage_account, credential=credential)
+    return ADLS2Resource(
+        storage_account=storage_account, cloud_type=cloud_type, credential=credential
+    )

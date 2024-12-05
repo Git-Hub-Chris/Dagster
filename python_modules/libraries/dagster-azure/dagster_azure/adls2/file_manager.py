@@ -1,6 +1,8 @@
 import io
+import re
 import uuid
 from contextlib import contextmanager
+from typing import Optional
 
 import dagster._check as check
 from dagster._core.storage.file_manager import (
@@ -14,10 +16,13 @@ from dagster._core.storage.file_manager import (
 class ADLS2FileHandle(FileHandle):
     """A reference to a file on ADLS2."""
 
-    def __init__(self, account: str, file_system: str, key: str):
+    def __init__(
+        self, account: str, file_system: str, key: str, primary_endpoint: Optional[str] = None
+    ):
         self._account = check.str_param(account, "account")
         self._file_system = check.str_param(file_system, "file_system")
         self._key = check.str_param(key, "key")
+        self._primary_endpoint = check.opt_str_param(primary_endpoint, "primary_endpoint")
 
     @property
     def account(self):
@@ -40,9 +45,16 @@ class ADLS2FileHandle(FileHandle):
         return self.adls2_path
 
     @property
+    def subdomain(self):
+        """str: The subdomain of the ADLS2 URL."""
+        if not self._primary_endpoint:
+            return "dfs.core.windows.net"
+        return re.search(r"(dfs.+$)", self._primary_endpoint).group(0)
+
+    @property
     def adls2_path(self):
         """str: The file's ADLS2 URL."""
-        return f"adfss://{self.file_system}@{self.account}.dfs.core.windows.net/{self.key}"
+        return f"adfss://{self.file_system}@{self.account}.{self.subdomain}/{self.key}"
 
 
 class ADLS2FileManager(FileManager):
@@ -106,7 +118,9 @@ class ADLS2FileManager(FileManager):
             file_system=self._file_system, file_path=adls2_key
         )
         adls2_file.upload_data(file_obj, overwrite=True)
-        return ADLS2FileHandle(self._client.account_name, self._file_system, adls2_key)
+        return ADLS2FileHandle(
+            self._client.account_name, self._file_system, adls2_key, self._client.primary_endpoint
+        )
 
     def get_full_key(self, file_key):
         return f"{self._prefix}/{file_key}"

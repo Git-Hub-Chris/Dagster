@@ -14,5 +14,10 @@ def file_system():
 
 
 @pytest.fixture(scope="session")
+def primary_endpoint():
+    yield "some-endpoint.dfs.core.windows.net"
+
+
+@pytest.fixture(scope="session")
 def credential():
     yield os.environ.get("AZURE_STORAGE_ACCOUNT_KEY")

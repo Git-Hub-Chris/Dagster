@@ -1,3 +1,4 @@
+from unittest import mock
 from uuid import uuid4
 
 import pytest
@@ -327,3 +328,27 @@ def test_with_fake_adls2_resource():
 
     result = job.execute_in_process(run_config=run_config)
     assert result.success
+
+
+@pytest.mark.parametrize(
+    "primary_endpoint, expected_uri_part",
+    [
+        ("myaccount.dfs.core.usgovcloudapi.net", "dfs.core.usgovcloudapi.net"),
+        ("myaccount.dfs.core.windows.net", "dfs.core.windows.net"),
+    ],
+)
+def test_adls2_pickle_io_manager_uri(primary_endpoint, expected_uri_part):
+    # Mock the ADLS2 client to simulate different cloud endpoints
+    mock_adls2_client = mock.MagicMock()
+    mock_adls2_client.primary_endpoint = primary_endpoint
+
+    io_manager = PickledObjectADLS2IOManager(
+        file_system="my-file-system",
+        adls2_client=mock_adls2_client,
+        blob_client=mock.MagicMock(),
+        lease_client_constructor=mock.MagicMock(),
+    )
+
+    path = UPath("my/path/to/object")
+    message = io_manager.get_loading_input_log_message(path)
+    assert expected_uri_part in message
