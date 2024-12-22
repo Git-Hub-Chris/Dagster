@@ -21,3 +21,10 @@ def test_definitions_component_with_include_file_absolute() -> None:
 def test_definitions_component_with_include_file_relative() -> None:
     defs = load_test_component_defs("definitions/include_file_relative_import")
     assert {spec.key for spec in defs.get_all_asset_specs()} == {AssetKey("an_asset")}
+
+
+def test_definitions_componet_with_component_declaration() -> None:
+    defs = load_test_component_defs("definitions/python_decl")
+    assert {spec.key for spec in defs.get_all_asset_specs()} == {
+        AssetKey("an_asset_from_python_decl")
+    }
