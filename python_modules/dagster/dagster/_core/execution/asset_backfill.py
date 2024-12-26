@@ -6,7 +6,6 @@ from datetime import datetime
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
-    AbstractSet,
     Iterable,
     List,
     Mapping,
@@ -182,30 +181,28 @@ class AssetBackfillData(NamedTuple):
         )
 
     def all_requested_partitions_marked_as_materialized_or_failed(self) -> bool:
-        for partition in self.requested_subset.iterate_asset_partitions():
-            if (
-                partition not in self.materialized_subset
-                and partition not in self.failed_and_downstream_subset
-            ):
-                return False
-
-        return True
+        return (
+            len(
+                (
+                    self.requested_subset
+                    - self.materialized_subset
+                    - self.failed_and_downstream_subset
+                ).asset_keys
+            )
+            == 0
+        )
 
     def with_run_requests_submitted(
         self,
         run_requests: Sequence[RunRequest],
-        asset_graph: RemoteAssetGraph,
-        instance_queryer: CachingInstanceQueryer,
+        asset_graph_view: AssetGraphView,
     ) -> "AssetBackfillData":
-        requested_partitions = get_requested_asset_partitions_from_run_requests(
+        requested_partitions = _get_requested_asset_graph_subset_from_run_requests(
             run_requests,
-            asset_graph,
-            instance_queryer,
+            asset_graph_view,
         )
 
-        submitted_partitions = self.requested_subset | AssetGraphSubset.from_asset_partition_set(
-            set(requested_partitions), asset_graph=asset_graph
-        )
+        submitted_partitions = self.requested_subset | requested_partitions
 
         return self.replace_requested_subset(submitted_partitions)
 
@@ -667,12 +664,13 @@ class AssetBackfillIterationResult(NamedTuple):
     reserved_run_ids: Sequence[str]
 
 
-def get_requested_asset_partitions_from_run_requests(
+def _get_requested_asset_graph_subset_from_run_requests(
     run_requests: Sequence[RunRequest],
-    asset_graph: RemoteAssetGraph,
-    instance_queryer: CachingInstanceQueryer,
-) -> AbstractSet[AssetKeyPartitionKey]:
-    requested_partitions = set()
+    asset_graph_view: AssetGraphView,
+) -> AssetGraphSubset:
+    asset_graph = asset_graph_view.asset_graph
+    instance_queryer = asset_graph_view.get_inner_queryer_for_back_compat()
+    requested_subset = AssetGraphSubset.empty()
     for run_request in run_requests:
         # Run request targets a range of partitions
         range_start = run_request.tags.get(ASSET_PARTITION_RANGE_START_TAG)
@@ -692,21 +690,31 @@ def get_requested_asset_partitions_from_run_requests(
             )
 
             partitions_def = cast(PartitionsDefinition, next(iter(partitions_defs)))
-            partitions_in_range = partitions_def.get_partition_keys_in_range(
-                PartitionKeyRange(range_start, range_end), instance_queryer
+            partition_subset_in_range = partitions_def.get_subset_in_range(
+                partition_key_range=PartitionKeyRange(range_start, range_end),
+                dynamic_partitions_store=instance_queryer,
             )
-            requested_partitions = requested_partitions | {
-                AssetKeyPartitionKey(asset_key, partition_key)
+            entity_subsets = [
+                check.not_none(
+                    asset_graph_view.get_subset_from_serializable_subset(
+                        SerializableEntitySubset(key=asset_key, value=partition_subset_in_range)
+                    )
+                )
                 for asset_key in selected_assets
-                for partition_key in partitions_in_range
-            }
+            ]
+            requested_subset = requested_subset | AssetGraphSubset.from_entity_subsets(
+                entity_subsets
+            )
         else:
-            requested_partitions = requested_partitions | {
-                AssetKeyPartitionKey(asset_key, run_request.partition_key)
-                for asset_key in cast(Sequence[AssetKey], run_request.asset_selection)
-            }
+            requested_subset = requested_subset | AssetGraphSubset.from_asset_partition_set(
+                {
+                    AssetKeyPartitionKey(asset_key, run_request.partition_key)
+                    for asset_key in cast(Sequence[AssetKey], run_request.asset_selection)
+                },
+                asset_graph,
+            )
 
-    return requested_partitions
+    return requested_subset
 
 
 def _write_updated_backfill_data(
@@ -731,16 +739,18 @@ def _write_updated_backfill_data(
 
 
 def _submit_runs_and_update_backfill_in_chunks(
-    instance: DagsterInstance,
+    asset_graph_view: AssetGraphView,
     workspace_process_context: IWorkspaceProcessContext,
     backfill_id: str,
     asset_backfill_iteration_result: AssetBackfillIterationResult,
-    asset_graph: RemoteWorkspaceAssetGraph,
     logger: logging.Logger,
     run_tags: Mapping[str, str],
     instance_queryer: CachingInstanceQueryer,
 ) -> Iterable[None]:
     from dagster._core.execution.backfill import BulkActionStatus
+
+    asset_graph = cast(RemoteWorkspaceAssetGraph, asset_graph_view.asset_graph)
+    instance = asset_graph_view.instance
 
     run_requests = asset_backfill_iteration_result.run_requests
 
@@ -798,8 +808,7 @@ def _submit_runs_and_update_backfill_in_chunks(
         updated_backfill_data: AssetBackfillData = (
             updated_backfill_data.with_run_requests_submitted(
                 [run_request],
-                asset_graph,
-                instance_queryer,
+                asset_graph_view,
             )
         )
 
@@ -1095,11 +1104,10 @@ def execute_asset_backfill_iteration(
 
         if result.run_requests:
             yield from _submit_runs_and_update_backfill_in_chunks(
-                instance,
+                asset_graph_view,
                 workspace_process_context,
                 updated_backfill.backfill_id,
                 result,
-                asset_graph,
                 logger,
                 run_tags=updated_backfill.tags,
                 instance_queryer=instance_queryer,

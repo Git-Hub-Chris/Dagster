@@ -313,10 +313,7 @@ def _single_backfill_iteration(
 
     return backfill_data.with_run_requests_submitted(
         result.run_requests,
-        asset_graph,
-        instance_queryer=_get_instance_queryer(
-            instance, asset_graph, backfill_data.backfill_start_datetime
-        ),
+        _get_asset_graph_view(instance, asset_graph, backfill_data.backfill_start_datetime),
     )
 
 
@@ -706,14 +703,11 @@ def run_backfill_to_completion(
 
         assert result1.backfill_data != backfill_data
 
-        instance_queryer = _get_instance_queryer(
-            instance, asset_graph, evaluation_time=backfill_data.backfill_start_datetime
-        )
-
         backfill_data_with_submitted_runs = result1.backfill_data.with_run_requests_submitted(
             result1.run_requests,
-            asset_graph,
-            instance_queryer,
+            _get_asset_graph_view(
+                instance, asset_graph, evaluation_time=backfill_data.backfill_start_datetime
+            ),
         )
 
         # once everything that was requested is added to the requested subset, nothing should change if the iteration repeats
