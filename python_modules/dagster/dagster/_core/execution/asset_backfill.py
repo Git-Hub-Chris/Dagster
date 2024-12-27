@@ -196,12 +196,12 @@ class AssetBackfillData(NamedTuple):
         run_requests: Sequence[RunRequest],
         asset_graph_view: AssetGraphView,
     ) -> "AssetBackfillData":
-        requested_partitions = _get_requested_asset_graph_subset_from_run_requests(
+        requested_subset = _get_requested_asset_graph_subset_from_run_requests(
             run_requests,
             asset_graph_view,
         )
 
-        submitted_partitions = self.requested_subset | requested_partitions
+        submitted_partitions = self.requested_subset | requested_subset
 
         return self.replace_requested_subset(submitted_partitions)
 
@@ -1452,14 +1452,13 @@ def execute_asset_backfill_iteration_inner(
         RemoteWorkspaceAssetGraph, asset_graph_view.asset_graph
     )
 
-    initial_asset_graph_subset: AssetGraphSubset = AssetGraphSubset.empty()
     request_roots = not asset_backfill_data.requested_runs_for_target_roots
     if request_roots:
         logger.info(
             "Not all root assets (assets in backfill that do not have parents in the backill) have been requested, finding root assets."
         )
         target_roots = asset_backfill_data.get_target_root_asset_graph_subset(instance_queryer)
-        initial_asset_graph_subset = initial_asset_graph_subset | target_roots
+        candidate_asset_graph_subset = target_roots
         logger.info(
             f"Root assets that have not yet been requested:\n{_asset_graph_subset_to_str(target_roots, asset_graph)}"
         )
@@ -1508,11 +1507,8 @@ def execute_asset_backfill_iteration_inner(
                 for asset_key in asset_backfill_data.target_subset.asset_keys
             )
         )
-        initial_asset_graph_subset = (
-            initial_asset_graph_subset
-            | AssetGraphSubset.from_asset_partition_set(
-                parent_materialized_asset_partitions, asset_graph
-            )
+        candidate_asset_graph_subset = AssetGraphSubset.from_asset_partition_set(
+            parent_materialized_asset_partitions, asset_graph
         )
 
         yield None
@@ -1538,7 +1534,7 @@ def execute_asset_backfill_iteration_inner(
             target_subset=asset_backfill_data.target_subset,
             failed_and_downstream_subset=failed_and_downstream_subset,
         ),
-        initial_asset_graph_subset=initial_asset_graph_subset,
+        initial_asset_graph_subset=candidate_asset_graph_subset,
         include_full_execution_set=True,
     )
 
