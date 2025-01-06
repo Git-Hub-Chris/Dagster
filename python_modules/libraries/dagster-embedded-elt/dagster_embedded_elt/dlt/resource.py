@@ -29,7 +29,6 @@ from dagster_embedded_elt.dlt.dlt_event_iterator import DltEventIterator, DltEve
 from dagster_embedded_elt.dlt.translator import DagsterDltTranslator
 
 
-@experimental
 class DagsterDltResource(ConfigurableResource):
     @classmethod
     def _is_dagster_maintained(cls) -> bool:
