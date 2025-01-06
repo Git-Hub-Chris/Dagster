@@ -10,6 +10,7 @@ from dagster import (
     ScheduleDefinition,
     _check as check,
 )
+from dagster._annotations import superseded
 
 from dagster_airflow.dagster_job_factory import make_dagster_job_from_airflow_dag
 from dagster_airflow.dagster_schedule_factory import (
@@ -25,6 +26,12 @@ from dagster_airflow.resources.airflow_persistent_db import AirflowPersistentDat
 from dagster_airflow.utils import is_airflow_2_loaded_in_environment
 
 
+@superseded(
+    additional_warn_text=(
+        "The `dagster-airlift` library is no longer best practice. "
+        "Use `build_defs_from_airflow_instance` in the `dagster-airlift` library instead."
+    )
+)
 def make_dagster_definitions_from_airflow_dag_bag(
     dag_bag: DagBag,
     connections: Optional[List[Connection]] = None,
@@ -70,6 +77,12 @@ def make_dagster_definitions_from_airflow_dag_bag(
     )
 
 
+@superseded(
+    additional_warn_text=(
+        "The `dagster-airlift` library is no longer best practice. "
+        "Use `build_defs_from_airflow_instance` in the `dagster-airlift` library instead."
+    )
+)
 def make_dagster_definitions_from_airflow_dags_path(
     dag_path: str,
     safe_mode: bool = True,
@@ -142,6 +155,12 @@ def make_dagster_definitions_from_airflow_dags_path(
     )
 
 
+@superseded(
+    additional_warn_text=(
+        "The `dagster-airlift` library is no longer best practice. "
+        "Use `build_defs_from_airflow_instance` in the `dagster-airlift` library instead."
+    )
+)
 def make_dagster_definitions_from_airflow_example_dags(
     resource_defs: Optional[Mapping[str, ResourceDefinition]] = {},
 ) -> Definitions:
@@ -179,6 +198,11 @@ def make_dagster_definitions_from_airflow_example_dags(
     )
 
 
+@superseded(
+    additional_warn_text=(
+        "The `dagster-airlift` library is no longer best practice. Use the `dagster-airlift` library instead."
+    )
+)
 def make_schedules_and_jobs_from_airflow_dag_bag(
     dag_bag: DagBag,
     connections: Optional[List[Connection]] = None,
