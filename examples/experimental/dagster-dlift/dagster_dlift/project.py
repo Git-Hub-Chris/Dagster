@@ -2,6 +2,7 @@ from functools import cached_property, lru_cache
 from typing import NamedTuple, Sequence, Type, Union
 
 from dagster import AssetCheckSpec, AssetSpec
+from dagster._annotations import preview
 
 from dagster_dlift.client import UnscopedDbtCloudClient
 from dagster_dlift.compute import compute_environment_data
@@ -9,6 +10,7 @@ from dagster_dlift.env_client import EnvScopedDbtCloudClient
 from dagster_dlift.translator import DagsterDbtCloudTranslator, DbtCloudProjectEnvironmentData
 
 
+@preview
 class DbtCloudCredentials(NamedTuple):
     account_id: int
     token: str
@@ -17,6 +19,7 @@ class DbtCloudCredentials(NamedTuple):
 
 
 # Eventually a configurable resource
+@preview
 class DBTCloudProjectEnvironment:
     """Represents an environment within a project of dbt cloud."""
 
