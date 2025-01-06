@@ -2,8 +2,10 @@ from pathlib import Path
 from typing import Any, Dict, NamedTuple, Optional, Sequence
 
 import yaml
+from dagster._annotations import beta
 
 
+@beta
 class TaskProxiedState(NamedTuple):
     """A class to store the proxied state of a task.
 
@@ -29,6 +31,7 @@ class TaskProxiedState(NamedTuple):
         return {"id": self.task_id, "proxied": self.proxied}
 
 
+@beta
 class DagProxiedState(NamedTuple):
     """A class to store the proxied state of tasks in a dag.
 
@@ -90,6 +93,7 @@ class DagProxiedState(NamedTuple):
         return self.proxied is not None
 
 
+@beta
 class AirflowProxiedState(NamedTuple):
     """A class to store the proxied state of dags and tasks in Airflow.
     Typically, this is constructed by :py:func:`load_proxied_state_from_yaml`.
@@ -150,6 +154,7 @@ class ProxiedStateParsingError(Exception):
     pass
 
 
+@beta
 def load_proxied_state_from_yaml(proxied_yaml_path: Path) -> AirflowProxiedState:
     """Loads the proxied state from a directory of yaml files.
 
