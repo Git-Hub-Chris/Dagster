@@ -190,7 +190,6 @@ class SlingEventIterator(Iterator[T]):
     def __iter__(self) -> "SlingEventIterator[T]":
         return self
 
-    @experimental
     @public
     def fetch_column_metadata(self) -> "SlingEventIterator":
         """Fetches column metadata for each table synced by the Sling CLI.
@@ -213,7 +212,6 @@ class SlingEventIterator(Iterator[T]):
             _fetch_column_metadata(), self._sling_cli, self._replication_config, self._context
         )
 
-    @experimental
     @public
     def fetch_row_count(self) -> "SlingEventIterator":
         """Fetches row count metadata for each table synced by the Sling CLI.
