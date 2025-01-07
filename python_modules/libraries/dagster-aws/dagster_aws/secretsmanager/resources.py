@@ -5,6 +5,7 @@ from dagster import (
     Field as LegacyDagsterField,
     resource,
 )
+from dagster._annotations import beta
 from dagster._config.field_utils import Shape
 from dagster._core.definitions.resource_definition import dagster_maintained_resource
 from dagster._core.test_utils import environ
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     import botocore
 
 
+@beta
 class SecretsManagerResource(ResourceWithBoto3Configuration):
     """Resource that gives access to AWS SecretsManager.
 
@@ -73,6 +75,7 @@ class SecretsManagerResource(ResourceWithBoto3Configuration):
         )
 
 
+@beta
 @dagster_maintained_resource
 @resource(SecretsManagerResource.to_config_schema())
 def secretsmanager_resource(context) -> "botocore.client.SecretsManager":  # pyright: ignore (reportAttributeAccessIssue)
@@ -128,6 +131,7 @@ def secretsmanager_resource(context) -> "botocore.client.SecretsManager":  # pyr
     return SecretsManagerResource.from_resource_context(context).get_client()
 
 
+@beta
 class SecretsManagerSecretsResource(ResourceWithBoto3Configuration):
     """Resource that provides a dict which maps selected SecretsManager secrets to
     their string values. Also optionally sets chosen secrets as environment variables.
@@ -249,6 +253,7 @@ LEGACY_SECRETSMANAGER_SECRETS_SCHEMA = {
 }
 
 
+@beta
 @dagster_maintained_resource
 @resource(config_schema=LEGACY_SECRETSMANAGER_SECRETS_SCHEMA)
 @contextmanager
