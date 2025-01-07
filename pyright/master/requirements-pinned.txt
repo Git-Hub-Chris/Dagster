@@ -58,10 +58,10 @@ billiard==4.2.1
 bleach==6.2.0
 blinker==1.9.0
 bokeh==3.6.2
-boto3==1.35.92
+boto3==1.35.93
 boto3-stubs-lite==1.35.70
-botocore==1.35.92
-botocore-stubs==1.35.92
+botocore==1.35.93
+botocore-stubs==1.35.93
 buildkite-test-collector==0.1.9
 cachecontrol==0.14.1
 cached-property==2.0.1
@@ -157,7 +157,6 @@ dagster-contrib-modal==0.0.2
 -e python_modules/libraries/dagster-prometheus
 -e python_modules/libraries/dagster-pyspark
 -e python_modules/libraries/dagster-sdf
--e python_modules/libraries/dagster-shell
 -e python_modules/libraries/dagster-sigma
 -e python_modules/libraries/dagster-slack
 -e python_modules/libraries/dagster-snowflake
@@ -288,7 +287,7 @@ httpx-sse==0.4.0
 humanfriendly==10.0
 humanize==4.11.0
 hyperframe==6.0.1
-hypothesis==6.123.4
+hypothesis==6.123.6
 idna==3.10
 ijson==3.3.0
 imagesize==1.4.1
@@ -359,7 +358,7 @@ mako==1.3.8
 markdown==3.7
 markdown-it-py==3.0.0
 markupsafe==3.0.2
-marshmallow==3.23.3
+marshmallow==3.20.1
 marshmallow-oneofschema==3.1.1
 marshmallow-sqlalchemy==0.26.1
 mashumaro==3.14
@@ -371,7 +370,7 @@ mdurl==0.1.2
 mistune==3.1.0
 mixpanel==4.10.1
 mlflow==1.27.0
-modal==0.71.1
+modal==0.71.3
 more-itertools==10.5.0
 morefs==0.2.2
 moto==4.2.14
@@ -380,12 +379,12 @@ msal==1.31.1
 msal-extensions==1.2.0
 msgpack==1.1.0
 multidict==6.1.0
-mypy-boto3-ecs==1.35.92
-mypy-boto3-emr==1.35.68
-mypy-boto3-emr-serverless==1.35.79
-mypy-boto3-glue==1.35.87
-mypy-boto3-logs==1.35.81
-mypy-boto3-s3==1.35.92
+mypy-boto3-ecs==1.35.93
+mypy-boto3-emr==1.35.93
+mypy-boto3-emr-serverless==1.35.93
+mypy-boto3-glue==1.35.93
+mypy-boto3-logs==1.35.93
+mypy-boto3-s3==1.35.93
 mypy-extensions==1.0.0
 mypy-protobuf==3.6.0
 mysql-connector-python==9.1.0
@@ -423,7 +422,7 @@ outcome==1.3.0.post0
 overrides==7.7.0
 packaging==24.2
 pandas==2.2.3
-pandas-gbq==0.26.0
+pandas-gbq==0.26.1
 pandas-stubs==2.2.3.241126
 pandera==0.22.1
 pandocfilters==1.5.1
@@ -475,7 +474,7 @@ pydantic-core==2.27.2
 pydantic-settings==2.7.1
 pydata-google-auth==1.9.0
 pyflakes==3.2.0
-pygments==2.19.0
+pygments==2.19.1
 pyjwt==2.10.1
 pymdown-extensions==10.13
 pynacl==1.5.0
@@ -552,7 +551,7 @@ skein==0.8.2
 skl2onnx==1.18.0
 slack-sdk==3.34.0
 sling==1.3.4
-sling-mac-arm64==1.3.4
+sling-linux-amd64==1.3.4
 smmap==5.0.2
 sniffio==1.3.1
 snowballstemmer==2.2.0
@@ -584,10 +583,10 @@ sshtunnel==0.4.0
 stack-data==0.6.3
 starlette==0.41.3
 structlog==24.4.0
-sympy==1.13.3
+sympy==1.13.1
 synchronicity==0.9.8
 syrupy==4.8.0
-tableauserverclient==0.34
+tableauserverclient==0.35
 tabledata==1.3.4
 tabulate==0.9.0
 tblib==3.0.0
@@ -600,12 +599,11 @@ tiktoken==0.8.0
 tinycss2==1.4.0
 toml==0.10.2
 tomli==2.2.1
-tomli-w==1.1.0
 tomlkit==0.13.2
 toolz==1.0.0
 toposort==1.10
-torch==2.4.1
-torchvision==0.19.1
+torch==2.5.1
+torchvision==0.20.1
 tornado==6.4.2
 tox==4.23.2
 tqdm==4.67.1
