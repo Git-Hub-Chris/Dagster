@@ -10,6 +10,7 @@ from dagster import (
     InitResourceContext,
     IOManager,
 )
+from dagster._annotations import beta
 from dagster._core.definitions.metadata import MetadataValue
 from dagster._core.execution.context.input import InputContext
 from dagster._core.execution.context.output import OutputContext
@@ -82,6 +83,7 @@ class LocalOutputNotebookIOManager(OutputNotebookIOManager):
             return file_obj.read()
 
 
+@beta
 class ConfigurableLocalOutputNotebookIOManager(ConfigurableIOManagerFactory):
     """Built-in IO Manager for handling output notebook."""
 
@@ -111,6 +113,7 @@ class ConfigurableLocalOutputNotebookIOManager(ConfigurableIOManagerFactory):
         )
 
 
+@beta
 @dagster_maintained_io_manager
 @io_manager(config_schema=ConfigurableLocalOutputNotebookIOManager.to_config_schema())
 def local_output_notebook_io_manager(init_context) -> LocalOutputNotebookIOManager:
