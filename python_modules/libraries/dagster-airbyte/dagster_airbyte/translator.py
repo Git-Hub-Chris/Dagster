@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Mapping, Optional, Sequence
 
-from dagster._annotations import deprecated, experimental
+from dagster._annotations import beta, deprecated
 from dagster._core.definitions.asset_key import AssetKey
 from dagster._core.definitions.asset_spec import AssetSpec
 from dagster._core.definitions.metadata.metadata_set import NamespacedMetadataSet, TableMetadataSet
@@ -201,7 +201,7 @@ class AirbyteMetadataSet(NamespacedMetadataSet):
         return "dagster-airbyte"
 
 
-@experimental
+@beta
 class DagsterAirbyteTranslator:
     """Translator class which converts a `AirbyteConnectionTableProps` object into AssetSpecs.
     Subclass this class to implement custom logic how to translate Airbyte content into asset spec.
