@@ -9,7 +9,7 @@ from dagster import (
     OpExecutionContext,
     _check as check,
 )
-from dagster._annotations import experimental, public
+from dagster._annotations import beta, public
 from dagster._core.definitions.metadata.metadata_set import TableMetadataSet
 from dagster._core.utils import imap
 from typing_extensions import TypeVar
@@ -86,7 +86,7 @@ class FivetranEventIterator(Iterator[T]):
     def __iter__(self) -> "FivetranEventIterator[T]":
         return self
 
-    @experimental
+    @beta
     @public
     def fetch_column_metadata(self) -> "FivetranEventIterator":
         """Fetches column metadata for each table synced with the Fivetran API.
