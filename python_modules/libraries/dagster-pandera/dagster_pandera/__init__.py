@@ -15,6 +15,7 @@ from dagster import (
     TypeCheck,
     TypeCheckContext,
 )
+from dagster._annotations import beta
 from dagster._core.definitions.metadata import MetadataValue
 from dagster._core.libraries import DagsterLibraryRegistry
 from typing_extensions import TypeAlias
@@ -74,6 +75,7 @@ DagsterLibraryRegistry.register("dagster-pandera", __version__)
 # ########################
 
 
+@beta
 def pandera_schema_to_dagster_type(
     schema: Union[DagsterPanderaSchema, DagsterPanderaSchemaModel],
 ) -> DagsterType:
