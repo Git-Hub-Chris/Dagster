@@ -19,17 +19,18 @@ export const PoolTag = ({pool}: {pool: string}) => {
     },
   );
 
+  const concurrencyLimit = data?.instance.concurrencyLimit;
   return (
-    <Tag>
+    <Tag intent={concurrencyLimit && concurrencyLimit.limit === null ? 'warning' : 'none'}>
       <Box flex={{gap: 4, alignItems: 'center'}}>
         <Icon name="dynamic_feed" />
         <Link to={path}>{pool}</Link>
-        {data?.instance.concurrencyLimit && data.instance.concurrencyLimit.limit === null ? (
+        {concurrencyLimit && concurrencyLimit.limit === null ? (
           <Tooltip
             placement="top"
             content="This pool currently does not have any slots configured."
           >
-            <Icon name="check_warning" />
+            <Icon name="warning_outline" />
           </Tooltip>
         ) : null}
       </Box>
