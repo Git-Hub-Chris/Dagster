@@ -12,7 +12,7 @@ from dagster import (
     InitResourceContext,
     OpExecutionContext,
 )
-from dagster._annotations import experimental, public
+from dagster._annotations import public
 from dagster._core.errors import DagsterInvariantViolationError
 from openai import Client
 from pydantic import Field, PrivateAttr
@@ -48,7 +48,6 @@ def _add_to_asset_metadata(
 
 
 @public
-@experimental
 def with_usage_metadata(
     context: Union[AssetExecutionContext, OpExecutionContext], output_name: Optional[str], func
 ):
@@ -143,7 +142,6 @@ def with_usage_metadata(
 
 
 @public
-@experimental
 class OpenAIResource(ConfigurableResource):
     """This resource is wrapper over the
     `openai library <https://github.com/openai/openai-python>`_.
