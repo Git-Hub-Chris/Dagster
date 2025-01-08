@@ -5,7 +5,7 @@ from dagster import (
     AssetKey,
     _check as check,
 )
-from dagster._annotations import PublicAttr
+from dagster._annotations import PublicAttr, beta
 from dagster._record import record
 from dagster._serdes import whitelist_for_serdes
 
@@ -27,6 +27,7 @@ class TaskInfo:
         return check.is_list(self.metadata["downstream_task_ids"], str)
 
 
+@beta
 @whitelist_for_serdes
 @record
 class DagInfo:
