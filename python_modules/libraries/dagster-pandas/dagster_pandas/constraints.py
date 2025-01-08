@@ -9,7 +9,7 @@ from dagster import (
     TypeCheck,
     _check as check,
 )
-from dagster._annotations import experimental
+from dagster._annotations import beta
 from pandas import DataFrame
 from typing_extensions import Final
 
@@ -20,6 +20,7 @@ class ConstraintViolationException(Exception):
     """Indicates that a constraint has been violated."""
 
 
+@beta
 class ConstraintWithMetadataException(Exception):
     """This class defines the response generated when a pandas DF fails validation -- it can be used to generate either a
     failed typecheck or an exception.
@@ -107,6 +108,7 @@ class ColumnConstraintViolationException(ConstraintViolationException):
         return base_message
 
 
+@beta
 class ColumnWithMetadataException(ConstraintWithMetadataException):
     def __init__(self, constraint_name, constraint_description, expectation, offending, actual):
         super(ColumnWithMetadataException, self).__init__(
@@ -132,7 +134,7 @@ class Constraint:
         self.error_description = check.str_param(error_description, "error_description")
 
 
-@experimental
+@beta
 class ConstraintWithMetadata:
     """This class defines a base constraint over pandas DFs with organized metadata.
 
@@ -194,6 +196,7 @@ class ConstraintWithMetadata:
         )
 
 
+@beta
 class MultiConstraintWithMetadata(ConstraintWithMetadata):
     """Use this class if you have multiple constraints to check over the entire dataframe.
 
@@ -239,6 +242,7 @@ class MultiConstraintWithMetadata(ConstraintWithMetadata):
         )
 
 
+@beta
 class StrictColumnsWithMetadata(ConstraintWithMetadata):
     def __init__(self, column_list, enforce_ordering=False, raise_or_typecheck=True, name=None):
         self.enforce_ordering = check.bool_param(enforce_ordering, "enforce_ordering")
@@ -292,6 +296,7 @@ class DataFrameConstraint(Constraint):
         raise NotImplementedError()
 
 
+@beta
 class StrictColumnsConstraint(DataFrameConstraint):
     """A dataframe constraint that validates column existence and ordering.
 
@@ -333,6 +338,7 @@ class StrictColumnsConstraint(DataFrameConstraint):
                 )
 
 
+@beta
 class RowCountConstraint(DataFrameConstraint):
     """A dataframe constraint that validates the expected count of rows.
 
@@ -476,6 +482,7 @@ class ColumnConstraintWithMetadata(ConstraintWithMetadata):
                 return exc.return_as_typecheck()
 
 
+@beta
 class MultiColumnConstraintWithMetadata(ColumnConstraintWithMetadata):
     """This class is useful for constructing more complicated relationships between columns
     and expectations -- i.e. you want some validations on column A, others on column B, etc.
@@ -558,6 +565,7 @@ class MultiColumnConstraintWithMetadata(ColumnConstraintWithMetadata):
         return ConstraintWithMetadata.validate(self, data, *args, **kwargs)
 
 
+@beta
 class MultiAggregateConstraintWithMetadata(MultiColumnConstraintWithMetadata):
     """This class is similar to multicolumn, but takes in functions that operate on the whole column at once
     rather than ones that operate on each value --
@@ -595,6 +603,7 @@ class MultiAggregateConstraintWithMetadata(MultiColumnConstraintWithMetadata):
         )
 
 
+@beta
 def non_null_validation(x):
     """Validates that a particular value in a column is not null.
 
@@ -608,6 +617,7 @@ def non_null_validation(x):
     return not pd.isnull(x), {}
 
 
+@beta
 def all_unique_validator(column, ignore_missing_vals=False):
     """Validates that all values in an iterable are unique.
 
@@ -646,6 +656,7 @@ def all_unique_validator(column, ignore_missing_vals=False):
     return not duplicated.any(), {"actual": column[duplicated]}
 
 
+@beta
 def nonnull(func):
     """Decorator for column validation functions to make them error on nulls.
 
@@ -669,6 +680,7 @@ def nonnull(func):
     return nvalidator
 
 
+@beta
 def column_range_validation_factory(minim=None, maxim=None, ignore_missing_vals=False):
     """Factory for validators testing if column values are within a range.
 
@@ -729,6 +741,7 @@ def column_range_validation_factory(minim=None, maxim=None, ignore_missing_vals=
     return in_range_validation_fn
 
 
+@beta
 def categorical_column_validator_factory(categories, ignore_missing_vals=False):
     """Factory for validators testing if all values are in some set.
 
@@ -783,6 +796,7 @@ def categorical_column_validator_factory(categories, ignore_missing_vals=False):
     return categorical_validation_fn
 
 
+@beta
 def dtype_in_set_validation_factory(datatypes, ignore_missing_vals=False):
     """Factory for testing if the dtype of a val falls within some allowed set.
 
