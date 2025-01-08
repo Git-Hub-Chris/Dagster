@@ -19,7 +19,7 @@ from dagster import (
     _check as check,
     get_dagster_logger,
 )
-from dagster._annotations import deprecated, experimental
+from dagster._annotations import beta, deprecated
 from dagster._core.definitions.definitions_load_context import StateBackedDefinitionsLoader
 from dagster._record import record
 from dagster._utils.cached_method import cached_method
@@ -43,7 +43,7 @@ DEFAULT_POLL_TIMEOUT = 600
 TABLEAU_RECONSTRUCTION_METADATA_KEY_PREFIX = "dagster-tableau/reconstruction_metadata"
 
 
-@experimental
+@beta
 class BaseTableauClient:
     def __init__(
         self,
@@ -297,7 +297,7 @@ class BaseTableauClient:
         """
 
 
-@experimental
+@beta
 class TableauCloudClient(BaseTableauClient):
     """Represents a client for Tableau Cloud and provides utilities
     to interact with the Tableau API.
@@ -327,7 +327,7 @@ class TableauCloudClient(BaseTableauClient):
         return f"https://{self.pod_name}.online.tableau.com"
 
 
-@experimental
+@beta
 class TableauServerClient(BaseTableauClient):
     """Represents a client for Tableau Server and provides utilities
     to interact with Tableau APIs.
@@ -357,7 +357,7 @@ class TableauServerClient(BaseTableauClient):
         return f"https://{self.server_name}"
 
 
-@experimental
+@beta
 class BaseTableauWorkspace(ConfigurableResource):
     """Base class to represent a workspace in Tableau and provides utilities
     to interact with Tableau APIs.
@@ -531,7 +531,7 @@ class BaseTableauWorkspace(ConfigurableResource):
         )
 
 
-@experimental
+@beta
 def load_tableau_asset_specs(
     workspace: BaseTableauWorkspace,
     dagster_tableau_translator: Optional[
@@ -571,7 +571,7 @@ def load_tableau_asset_specs(
         )
 
 
-@experimental
+@beta
 class TableauCloudWorkspace(BaseTableauWorkspace):
     """Represents a workspace in Tableau Cloud and provides utilities
     to interact with Tableau APIs.
@@ -590,7 +590,7 @@ class TableauCloudWorkspace(BaseTableauWorkspace):
         )
 
 
-@experimental
+@beta
 class TableauServerWorkspace(BaseTableauWorkspace):
     """Represents a workspace in Tableau Server and provides utilities
     to interact with Tableau APIs.
