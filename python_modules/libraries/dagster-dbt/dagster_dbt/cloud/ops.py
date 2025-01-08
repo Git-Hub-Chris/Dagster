@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from dagster import Config, In, Nothing, Out, Output, op
+from dagster._annotations import superseded
 from dagster._core.storage.tags import COMPUTE_KIND_TAG
 from pydantic import Field
 
@@ -51,6 +52,12 @@ class DbtCloudRunOpConfig(Config):
     ins={"start_after": In(Nothing)},
     out=Out(DbtCloudOutput, description="Parsed output from running the dbt Cloud job."),
     tags={COMPUTE_KIND_TAG: "dbt_cloud"},
+)
+@superseded(
+    additional_warn_text=(
+        "The dbt Cloud APIs of the `dagster-dbt` library are no longer best practice. "
+        "Use `dagster-dlift` instead."
+    )
 )
 def dbt_cloud_run_op(context, config: DbtCloudRunOpConfig):
     """Initiates a run for a dbt Cloud job, then polls until the run completes. If the job
