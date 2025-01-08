@@ -9,7 +9,7 @@ from dagster import (
     PartitionMapping,
     _check as check,
 )
-from dagster._annotations import experimental, public
+from dagster._annotations import beta, public
 from dagster._core.definitions.partition import PartitionsDefinition
 from dagster._utils.tags import is_valid_tag_key
 
@@ -124,7 +124,7 @@ class DagsterDbtTranslator:
         return default_asset_key_fn(dbt_resource_props)
 
     @public
-    @experimental(emit_runtime_warning=False)
+    @beta(emit_runtime_warning=False)
     def get_partition_mapping(
         self,
         dbt_resource_props: Mapping[str, Any],
@@ -355,7 +355,7 @@ class DagsterDbtTranslator:
         return default_owners_from_dbt_resource_props(dbt_resource_props)
 
     @public
-    @experimental(emit_runtime_warning=False)
+    @beta(emit_runtime_warning=False)
     def get_freshness_policy(
         self, dbt_resource_props: Mapping[str, Any]
     ) -> Optional[FreshnessPolicy]:
@@ -409,7 +409,7 @@ class DagsterDbtTranslator:
         return default_freshness_policy_fn(dbt_resource_props)
 
     @public
-    @experimental(emit_runtime_warning=False)
+    @beta(emit_runtime_warning=False)
     def get_auto_materialize_policy(
         self, dbt_resource_props: Mapping[str, Any]
     ) -> Optional[AutoMaterializePolicy]:
@@ -464,7 +464,7 @@ class DagsterDbtTranslator:
         return default_auto_materialize_policy_fn(dbt_resource_props)
 
     @public
-    @experimental(emit_runtime_warning=False)
+    @beta(emit_runtime_warning=False)
     def get_automation_condition(
         self, dbt_resource_props: Mapping[str, Any]
     ) -> Optional[AutomationCondition]:
