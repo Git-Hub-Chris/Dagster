@@ -80,25 +80,6 @@ class AndAutomationCondition(BuiltinAutomationCondition[T_EntityKey]):
             else copy(self, operands=[child.replace(old, new) for child in self.operands])
         )
 
-    @public
-    def replace(
-        self, old: Union[AutomationCondition, str], new: AutomationCondition
-    ) -> AutomationCondition:
-        """Replaces all instances of ``old`` across any sub-conditions with ``new``.
-
-        If ``old`` is a string, then conditions with a label matching
-        that string will be replaced.
-
-        Args:
-            old (Union[AutomationCondition, str]): The condition to replace.
-            new (AutomationCondition): The condition to replace with.
-        """
-        return (
-            new
-            if old in [self, self.get_label()]
-            else copy(self, operands=[child.replace(old, new) for child in self.operands])
-        )
-
 
 @whitelist_for_serdes(storage_name="OrAssetCondition")
 @record
