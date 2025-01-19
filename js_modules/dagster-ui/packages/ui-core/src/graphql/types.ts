@@ -482,6 +482,7 @@ export type AssetNode = {
   partitionKeys: Array<Scalars['String']['output']>;
   partitionKeysByDimension: Array<DimensionPartitionKeys>;
   partitionStats: Maybe<PartitionStats>;
+  pools: Array<Scalars['String']['output']>;
   repository: Repository;
   requiredResources: Array<ResourceRequirement>;
   staleCauses: Array<StaleCause>;
@@ -824,6 +825,7 @@ export type CompositeSolidDefinition = ISolidDefinition &
     name: Scalars['String']['output'];
     outputDefinitions: Array<OutputDefinition>;
     outputMappings: Array<OutputMapping>;
+    pools: Array<Scalars['String']['output']>;
     solidHandle: Maybe<SolidHandle>;
     solidHandles: Array<SolidHandle>;
     solids: Array<Solid>;
@@ -845,10 +847,12 @@ export type ConcurrencyKeyInfo = {
   assignedStepRunIds: Array<Scalars['String']['output']>;
   claimedSlots: Array<ClaimedConcurrencySlot>;
   concurrencyKey: Scalars['String']['output'];
+  limit: Maybe<Scalars['Int']['output']>;
   pendingStepCount: Scalars['Int']['output'];
   pendingStepRunIds: Array<Scalars['String']['output']>;
   pendingSteps: Array<PendingConcurrencyStep>;
   slotCount: Scalars['Int']['output'];
+  usingDefaultLimit: Maybe<Scalars['Boolean']['output']>;
 };
 
 export type ConfigType = {
@@ -1839,6 +1843,7 @@ export type ISolidDefinition = {
   metadata: Array<MetadataItemDefinition>;
   name: Scalars['String']['output'];
   outputDefinitions: Array<OutputDefinition>;
+  pools: Array<Scalars['String']['output']>;
 };
 
 export type Input = {
@@ -4480,6 +4485,7 @@ export type ResumeBackfillSuccess = {
 export type Run = PipelineRun &
   RunsFeedEntry & {
     __typename: 'Run';
+    allConcurrencyKeys: Maybe<Array<Scalars['String']['output']>>;
     assetCheckSelection: Maybe<Array<AssetCheckhandle>>;
     assetChecks: Maybe<Array<AssetCheckhandle>>;
     assetMaterializations: Array<MaterializationEvent>;
@@ -5200,6 +5206,8 @@ export type SolidDefinition = ISolidDefinition & {
   metadata: Array<MetadataItemDefinition>;
   name: Scalars['String']['output'];
   outputDefinitions: Array<OutputDefinition>;
+  pool: Maybe<Scalars['String']['output']>;
+  pools: Array<Scalars['String']['output']>;
   requiredResources: Array<ResourceRequirement>;
 };
 
@@ -6734,6 +6742,7 @@ export const buildAssetNode = (
         : relationshipsToOmit.has('PartitionStats')
           ? ({} as PartitionStats)
           : buildPartitionStats({}, relationshipsToOmit),
+    pools: overrides && overrides.hasOwnProperty('pools') ? overrides.pools! : [],
     repository:
       overrides && overrides.hasOwnProperty('repository')
         ? overrides.repository!
@@ -7314,6 +7323,7 @@ export const buildCompositeSolidDefinition = (
         : [],
     outputMappings:
       overrides && overrides.hasOwnProperty('outputMappings') ? overrides.outputMappings! : [],
+    pools: overrides && overrides.hasOwnProperty('pools') ? overrides.pools! : [],
     solidHandle:
       overrides && overrides.hasOwnProperty('solidHandle')
         ? overrides.solidHandle!
@@ -7350,6 +7360,7 @@ export const buildConcurrencyKeyInfo = (
       overrides && overrides.hasOwnProperty('claimedSlots') ? overrides.claimedSlots! : [],
     concurrencyKey:
       overrides && overrides.hasOwnProperty('concurrencyKey') ? overrides.concurrencyKey! : 'quasi',
+    limit: overrides && overrides.hasOwnProperty('limit') ? overrides.limit! : 703,
     pendingStepCount:
       overrides && overrides.hasOwnProperty('pendingStepCount') ? overrides.pendingStepCount! : 370,
     pendingStepRunIds:
@@ -7359,6 +7370,10 @@ export const buildConcurrencyKeyInfo = (
     pendingSteps:
       overrides && overrides.hasOwnProperty('pendingSteps') ? overrides.pendingSteps! : [],
     slotCount: overrides && overrides.hasOwnProperty('slotCount') ? overrides.slotCount! : 455,
+    usingDefaultLimit:
+      overrides && overrides.hasOwnProperty('usingDefaultLimit')
+        ? overrides.usingDefaultLimit!
+        : true,
   };
 };
 
@@ -8834,6 +8849,7 @@ export const buildISolidDefinition = (
       overrides && overrides.hasOwnProperty('outputDefinitions')
         ? overrides.outputDefinitions!
         : [],
+    pools: overrides && overrides.hasOwnProperty('pools') ? overrides.pools! : [],
   };
 };
 
@@ -13132,6 +13148,10 @@ export const buildRun = (
   relationshipsToOmit.add('Run');
   return {
     __typename: 'Run',
+    allConcurrencyKeys:
+      overrides && overrides.hasOwnProperty('allConcurrencyKeys')
+        ? overrides.allConcurrencyKeys!
+        : [],
     assetCheckSelection:
       overrides && overrides.hasOwnProperty('assetCheckSelection')
         ? overrides.assetCheckSelection!
@@ -14487,6 +14507,8 @@ export const buildSolidDefinition = (
       overrides && overrides.hasOwnProperty('outputDefinitions')
         ? overrides.outputDefinitions!
         : [],
+    pool: overrides && overrides.hasOwnProperty('pool') ? overrides.pool! : 'voluptates',
+    pools: overrides && overrides.hasOwnProperty('pools') ? overrides.pools! : [],
     requiredResources:
       overrides && overrides.hasOwnProperty('requiredResources')
         ? overrides.requiredResources!

@@ -143,6 +143,7 @@ if TYPE_CHECKING:
     )
     from dagster._core.remote_representation.external import RemoteSchedule
     from dagster._core.run_coordinator import RunCoordinator
+    from dagster._core.run_coordinator.queued_run_coordinator import RunQueueConfig
     from dagster._core.scheduler import Scheduler, SchedulerDebugInfo
     from dagster._core.scheduler.instigation import (
         InstigatorState,
@@ -782,7 +783,16 @@ class DagsterInstance(DynamicPartitionsStore):
             self._run_coordinator.register_instance(self)
         return self._run_coordinator
 
-    # run launcher
+    def get_run_queue_config(self) -> Optional["RunQueueConfig"]:
+        from dagster._core.run_coordinator.queued_run_coordinator import QueuedRunCoordinator
+
+        if not isinstance(self.run_coordinator, QueuedRunCoordinator):
+            return None
+
+        run_coordinator_run_queue_config = self.run_coordinator.get_run_queue_config()
+        return run_coordinator_run_queue_config.with_concurrency_settings(
+            self.get_settings("concurrency")
+        )
 
     @property
     def run_launcher(self) -> "RunLauncher":
@@ -959,6 +969,11 @@ class DagsterInstance(DynamicPartitionsStore):
 
     @property
     def global_op_concurrency_default_limit(self) -> Optional[int]:
+        default_limit = self.get_settings("concurrency").get("pools", {}).get("default_limit")
+        if default_limit is not None:
+            return default_limit
+
+        # fallback to the old settings
         return self.get_settings("concurrency").get("default_op_concurrency_limit")
 
     # python logs
