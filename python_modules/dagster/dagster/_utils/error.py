@@ -1,14 +1,18 @@
+import contextlib
 import logging
 import os
+import sys
 import traceback
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from contextvars import ContextVar
 from types import TracebackType
 from typing import Any, NamedTuple, Optional, Union
 
 from typing_extensions import TypeAlias
 
 import dagster._check as check
+from dagster._core.errors import DagsterUserCodeExecutionError
 from dagster._serdes import whitelist_for_serdes
 
 
@@ -93,6 +97,45 @@ _REDACTED_ERROR_LOGGER_NAME = os.getenv(
     "DAGSTER_REDACTED_ERROR_LOGGER_NAME", "dagster.redacted_errors"
 )
 
+error_id_by_exception: ContextVar[Mapping[int, str]] = ContextVar(
+    "error_id_by_exception", default={}
+)
+
+
+@contextlib.contextmanager
+def redact_user_stacktrace_if_enabled():
+    """Context manager which, if a user has enabled redacting user code errors, logs exceptions raised from within,
+    and clears the stacktrace from the exception. It also marks the exception to be redacted if it was to be persisted
+    or otherwise serialized to be sent to Dagster Plus. This is useful for preventing sensitive information from
+    being leaked in error messages.
+    """
+    if not _should_redact_user_code_error():
+        yield
+    else:
+        try:
+            yield
+        except BaseException as e:
+            exc_info = sys.exc_info()
+
+            # Generate a unique error ID for this error, or re-use an existing one
+            # if this error has already been seen
+            existing_error_id = error_id_by_exception.get().get(id(e))
+
+            if not existing_error_id:
+                error_id = str(uuid.uuid4())
+
+                # Track the error ID for this exception so we can redact it later
+                error_id_by_exception.set({**error_id_by_exception.get(), id(e): error_id})
+                masked_logger = logging.getLogger(_REDACTED_ERROR_LOGGER_NAME)
+
+                masked_logger.error(
+                    f"Error occurred during user code execution, error ID {error_id}",
+                    exc_info=exc_info,
+                )
+
+            # Redact the stacktrace to ensure it will not be passed to Dagster Plus
+            raise e.with_traceback(None) from None
+
 
 def serializable_error_info_from_exc_info(
     exc_info: ExceptionInfo,
@@ -116,27 +159,37 @@ def serializable_error_info_from_exc_info(
     e = check.not_none(e, additional_message=additional_message)
     tb = check.not_none(tb, additional_message=additional_message)
 
-    from dagster._core.errors import DagsterUserCodeExecutionError, DagsterUserCodeProcessError
+    from dagster._core.errors import DagsterUserCodeProcessError
 
-    if isinstance(e, DagsterUserCodeExecutionError) and _should_redact_user_code_error():
-        error_id = str(uuid.uuid4())
-        masked_logger = logging.getLogger(_REDACTED_ERROR_LOGGER_NAME)
-
-        masked_logger.error(
-            f"Error occurred during user code execution, error ID {error_id}",
-            exc_info=exc_info,
-        )
-        return SerializableErrorInfo(
-            message=(
-                f"Error occurred during user code execution, error ID {error_id}. "
-                "The error has been masked to prevent leaking sensitive information. "
-                "Search in logs for this error ID for more details."
-            ),
-            stack=[],
-            cls_name="DagsterRedactedUserCodeError",
-            cause=None,
-            context=None,
-        )
+    err_id = error_id_by_exception.get().get(id(e))
+    if err_id:
+        if isinstance(e, DagsterUserCodeExecutionError):
+            return SerializableErrorInfo(
+                message=(
+                    f"Error occurred during user code execution, error ID {err_id}. "
+                    "The error has been masked to prevent leaking sensitive information. "
+                    "Search in logs for this error ID for more details."
+                ),
+                stack=[],
+                cls_name="DagsterRedactedUserCodeError",
+                cause=None,
+                context=None,
+            )
+        else:
+            tb_exc = traceback.TracebackException(exc_type, e, tb)
+            error_info = _serializable_error_info_from_tb(tb_exc)
+            return SerializableErrorInfo(
+                message=error_info.message
+                + (
+                    f"Error ID {err_id}. "
+                    "The error has been masked to prevent leaking sensitive information. "
+                    "Search in logs for this error ID for more details."
+                ),
+                stack=[],
+                cls_name=error_info.cls_name,
+                cause=None,
+                context=None,
+            )
 
     if (
         hoist_user_code_error
