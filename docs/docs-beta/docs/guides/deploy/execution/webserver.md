@@ -71,7 +71,7 @@ This feature is only available in Dagster+ Pro.
 
 - **Accessed by:** Clicking **Catalog** in the top navigation
 
-![The Asset Catalog page in the Dagster UI](/images/guides/deploy/execution/webserver/asset-catalog-cloud-pro.png)
+![The Asset Catalog page in the Dagster UI](/images/dagster-plus/features/asset-catalog/asset-catalog-cloud-pro.png)
 
 </TabItem>
 <TabItem value="Catalog views (Dagster+)">
@@ -88,7 +88,7 @@ This feature is only available in Dagster+ Pro.
   - Clicking **Catalog** in the top navigation
   - **From the Global asset lineage**: Clicking **View global asset lineage**, located near the top right corner of the **Catalog** page
 
-![The Catalog views dropdown in the Dagster+ Pro Catalog UI](/images/guides/deploy/execution/webserver/catalog-views.png)
+![The Catalog views dropdown in the Dagster+ Pro Catalog UI](/images/dagster-plus/features/asset-catalog/catalog-views.png)
 
 </TabItem>
 <TabItem value="Global asset lineage">

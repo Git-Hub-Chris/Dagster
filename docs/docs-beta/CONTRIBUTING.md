@@ -40,7 +40,7 @@ Before:
 ```
 <Image
   alt="Highlighted Redeploy option in the dropdown menu next to a code location in Dagster+"
-  src="/images/dagster-cloud/developing-testing/code-locations/redeploy-code-location.png"
+  src="/images/dagster-plus/deployment/code-locations/redeploy-code-location.png"
   width={1920}
   height={284}
 />
@@ -49,7 +49,7 @@ Before:
 After:
 
 ```
-![Highlighted Redeploy option in the dropdown menu next to a code location in Dagster+](/images/dagster-cloud/developing-testing/code-locations/redeploy-code-location.png)
+![Highlighted Redeploy option in the dropdown menu next to a code location in Dagster+](/images/dagster-plus/deployment/code-locations/redeploy-code-location.png)
 ```
 
 ### Notes
