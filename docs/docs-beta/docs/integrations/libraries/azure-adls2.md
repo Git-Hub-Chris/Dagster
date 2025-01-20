@@ -26,7 +26,7 @@ Dagster helps you use Azure Storage Accounts as part of your data pipeline. Azur
 pip install dagster-azure
 ```
 
-### Examples
+### Example
 
 <CodeExample filePath="integrations/azure-adls2.py" language="python" />
 
