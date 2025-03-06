@@ -1,4 +1,4 @@
-import {execSync} from 'child_process';
+import {execFileSync} from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -29,7 +29,12 @@ it(`builds mocks`, () => {
       mock.workspace ? 'workspace' : 'repository'
     }.yaml`;
 
-    execSync(`dagster-graphql -y ${repo} -t '${query}' ${vars} > ${mock.filepath}`);
+    const args = ['-y', repo, '-t', query];
+    if (vars) {
+      args.push('-v', JSON.stringify(mock.variables));
+    }
+    execFileSync('dagster-graphql', args, { stdio: 'pipe', encoding: 'utf-8' });
+    fs.writeFileSync(mock.filepath, execFileSync('dagster-graphql', args));
 
     if (JSON.parse(fs.readFileSync(mock.filepath).toString()).errors) {
       throw new Error(`Failed to generate ${mock.filepath}. See file for GraphQL error.`);
